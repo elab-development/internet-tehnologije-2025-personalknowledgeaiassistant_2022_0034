@@ -12,7 +12,7 @@ export const parseDocument = (filePath) => {
 
   if (ext === 'pdf') {
     const dataBuffer = fs.readFileSync(filePath);
-    const data = pdf(dataBuffer); // pdf-parse-fork vraća Promise
+    const data = pdf(dataBuffer);
     return data.then(res => {
       const text = res.text;
       const segments = text.split(/\n\n|\r\n\r\n/).filter(s => s.trim().length > 0);
