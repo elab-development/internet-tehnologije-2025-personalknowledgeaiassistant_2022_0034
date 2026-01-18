@@ -19,6 +19,7 @@ model User {
   firstName String
   lastName  String
   password  String
+  role      Role       @default(USER)
   createdAt DateTime   @default(now())
 
   documents Document[]
@@ -66,6 +67,8 @@ model Question {
   segments    QuestionSegment[]
 
   createdAt   DateTime   @default(now())
+
+  @@index([userId])
 }
 
 model QuestionSegment {
@@ -84,4 +87,9 @@ enum FileType {
   PDF
   TXT
   MD
+}
+
+enum Role{
+  ADMIN
+  USER
 }
