@@ -19,3 +19,37 @@ export const update = async (req, res, next) => {
     next(err);
   }
 };
+
+
+export const updateUserByAdmin = async (req, res) => {
+  try {
+    const user = await userService.adminUpdateUser(req.params.id, req.body);
+
+    res.json({
+      success: true,
+      message: "User updated by admin",
+      data: user
+    });
+  } catch (err) {
+    res.status(400).json({
+      success: false,
+      message: err.message
+    });
+  }
+};
+
+export const deleteUserByAdmin = async (req, res) => {
+  try {
+    await userService.adminDeleteUser(req.params.id);
+
+    res.json({
+      success: true,
+      message: "User deleted by admin"
+    });
+  } catch (err) {
+    res.status(400).json({
+      success: false,
+      message: err.message
+    });
+  }
+};

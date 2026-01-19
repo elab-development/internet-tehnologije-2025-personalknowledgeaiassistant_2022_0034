@@ -45,7 +45,7 @@ ${query}
 
   let answer = await llm.invoke(prompt);
 
-  if (!answer || answer.length < 5 || answer.toLowerCase().includes("Informacija nije pronađena u dokumentima"))
+  if (!answer || answer.length < 5 || answer.toLowerCase().includes("informacija nije pronađena u dokumentima"))
     answer = "Informacija nije pronađena u dokumentima";
 
   await prisma.question.update({

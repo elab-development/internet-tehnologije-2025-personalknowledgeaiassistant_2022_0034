@@ -20,3 +20,10 @@ export const login = async (req, res, next) => {
     next(err);
   }
 };
+
+export const logout = async (req, res) => {
+  return res.json({
+    success: true,
+    message: "Logged out successfully"
+  });
+};

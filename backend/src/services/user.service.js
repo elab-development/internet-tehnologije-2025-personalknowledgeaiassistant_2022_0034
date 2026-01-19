@@ -24,3 +24,26 @@ export const updateProfile = async (id, data) => {
   });
   return user;
 };
+
+export const adminUpdateUser = async (userId, data) => {
+  if (data.password) {
+    data.password = await bcrypt.hash(data.password, 10);
+  }
+
+  return prisma.user.update({
+    where: { id: userId },
+    data: {
+      firstName: data.firstName,
+      lastName: data.lastName,
+      username: data.username,
+      password: data.password,
+      role: data.role
+    }
+  });
+};
+
+export const adminDeleteUser = async (userId) => {
+  return prisma.user.delete({
+    where: { id: userId }
+  });
+};
