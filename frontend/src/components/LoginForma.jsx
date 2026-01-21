@@ -75,9 +75,14 @@ export default function LoginForma(props) {
         })
 
         const data = await res.json()
+        console.log("RESPONSE DATA:", data)
+
 
         if (res.ok && data.success) {
+          localStorage.setItem("token", data.data.token)
+
           alert(isRegister ? "Registration successful!" : "Login successful!")
+
           setUsername("")
           setPassword("")
           setConfirmPassword("")
@@ -167,7 +172,6 @@ export default function LoginForma(props) {
           )}
         </div>
 
-        {/* Polja za registraciju */}
         {isRegister && (
           <>
             {/* Confirm Password */}
