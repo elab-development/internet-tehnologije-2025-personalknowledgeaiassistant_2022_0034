@@ -1,7 +1,8 @@
 import { useState } from "react"
+import { useNavigate } from "react-router-dom"
+
 
 export default function LoginForma(props) {
-  const [isRegister, setIsRegister] = useState(props.isRegister) // State za prebacivanje između login i register
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
@@ -9,6 +10,7 @@ export default function LoginForma(props) {
   const [serverError, setServerError] = useState("") // Greške sa servera
   const [firstName, setFirstName] = useState("")
   const [lastName, setLastName] = useState("")
+  const navigate = useNavigate()
 
   /* Regex za validan username */
   const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/ // primer: slova, brojevi, _ , 3-20 karaktera
@@ -30,7 +32,7 @@ export default function LoginForma(props) {
       newErrors.password = "Password must be at least 6 characters long"
     }
 
-    if (isRegister) {
+    if (props.isRegistering) {
       if (!confirmPassword) {
         newErrors.confirmPassword = "Please confirm your password"
       } else if (password !== confirmPassword) {
@@ -60,7 +62,7 @@ export default function LoginForma(props) {
     /* Ako nema grešaka, šalje se zahtev ka serveru */
     if (Object.keys(validationErrors).length === 0) {
       try {
-        const endpoint = isRegister
+        const endpoint = props.isRegistering
           ? "http://localhost:3000/api/auth/register"
           : "http://localhost:3000/api/auth/login"
 
@@ -68,20 +70,24 @@ export default function LoginForma(props) {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(
-            isRegister
+            props.isRegistering
               ? { username, password, firstName, lastName }
               : { username, password }
           ),
         })
 
         const data = await res.json()
-        console.log("RESPONSE DATA:", data)
+
 
 
         if (res.ok && data.success) {
           localStorage.setItem("token", data.data.token)
-
-          alert(isRegister ? "Registration successful!" : "Login successful!")
+          
+          if(!props.isRegistering) {
+            navigate("/chat")
+          } else {
+            props.setIsRegistering(!props.isRegistering)
+          }
 
           setUsername("")
           setPassword("")
@@ -101,11 +107,11 @@ export default function LoginForma(props) {
   return (
     <div className="bg-yellow-700 p-6 rounded-lg shadow-lg w-80">
       <h2 className="text-white text-xl mb-4">
-        {isRegister ? "Sign Up" : "Log In"}
+        {props.isRegistering ? "Sign Up" : "Log In"}
       </h2>
 
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-        {isRegister && (
+        {props.isRegistering && (
           <>
             {/* First Name */}
             <div className="flex flex-col">
@@ -172,7 +178,7 @@ export default function LoginForma(props) {
           )}
         </div>
 
-        {isRegister && (
+        {props.isRegistering && (
           <>
             {/* Confirm Password */}
             <div className="flex flex-col">
@@ -204,19 +210,19 @@ export default function LoginForma(props) {
           type="submit"
           className="bg-white text-yellow-700 font-semibold py-2 rounded hover:bg-gray-100 w-full"
         >
-          {isRegister ? "Sign Up" : "Log In"}
+          {props.isRegistering ? "Sign Up" : "Log In"}
         </button>
       </form>
 
-      {/* Prebacivanje Login / Register */}
+      {/* Prebacivanje Login / Signup */}
       <p className="text-white text-sm mt-3 text-center">
-        {isRegister ? "Already have an account?" : "Don't have an account?"}{" "}
+        {props.isRegistering ? "Already have an account?" : "Don't have an account?"}{" "}
         <button
           type="button"
           className="underline font-semibold"
-          onClick={() => setIsRegister(!isRegister)}
+          onClick={() => props.setIsRegistering(!props.isRegistering)}
         >
-          {isRegister ? "Log In" : "Sign Up"}
+          {props.isRegistering ? "Log In" : "Sign Up"}
         </button>
       </p>
     </div>
