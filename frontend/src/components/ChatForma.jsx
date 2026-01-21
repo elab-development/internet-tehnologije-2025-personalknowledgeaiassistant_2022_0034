@@ -1,5 +1,6 @@
 import { useState } from "react";
 import axios from "axios"
+import Navbar from "./NavBar";
 
 export default function ChatForma() {
     const [messages, setMessages] = useState([
@@ -9,8 +10,8 @@ export default function ChatForma() {
     const [isLoading, setIsLoading] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
 
-    // Multiple PDF upload → backend
-    const handlePdfUpload = async (e) => {
+    // Upload vise fajlova (PDF, TXT, MD)
+    const HandleFileUpload = async (e) => {
         const files = Array.from(e.target.files)
         if (!files.length) return
 
@@ -26,7 +27,7 @@ export default function ChatForma() {
                 if (!allowedExtensions.includes(fileExtension)) continue;
 
                 const formData = new FormData()
-                formData.append("file", file) // mora da se poklapa sa backend
+                formData.append("file", file)
 
                 console.log("Uploading:", file.name)
 
@@ -54,12 +55,12 @@ export default function ChatForma() {
             }
         } finally {
             setIsUploading(false)
-            e.target.value = "" // reset input
+            e.target.value = ""; // Reset input fajlova
         }
     }
 
 
-    // 💬 Chat submit (tekst samo)
+    // Chat submit (tekst samo)
     const handleSubmit = (e) => {
         e.preventDefault();
         if (!message.trim()) return;
@@ -84,19 +85,21 @@ export default function ChatForma() {
 
     return (
         <div className="bg-yellow-700 p-6 rounded-lg shadow-lg w-2/3 max-w-full h-3/4 flex flex-col">
-            <h2 className="text-white text-xl mb-4 text-center">
+            <Navbar />
+
+            <h2 className="text-white text-xl text-center mb-4">
                 AI Chat
             </h2>
 
             <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
-                {/* Chat messages */}
+                {/* Chat poruke */}
                 <div className="bg-yellow-600 rounded p-3 flex-1 min-h-0 overflow-y-auto space-y-2">
                     {messages.map((msg, index) => (
                         <div
                             key={index}
                             className={`max-w-[80%] p-2 rounded-lg text-sm break-words ${msg.sender === "user"
-                                ? "bg-white text-yellow-700 ml-auto"
-                                : "bg-yellow-800 text-white mr-auto"
+                                    ? "bg-white text-yellow-700 ml-auto"
+                                    : "bg-yellow-800 text-white mr-auto"
                                 }`}
                         >
                             {msg.text}
@@ -110,7 +113,7 @@ export default function ChatForma() {
                     )}
                 </div>
 
-                {/* Input + Buttons */}
+                {/* Input i dugme */}
                 <div className="mt-4 space-y-3">
                     <div className="flex flex-col">
                         <label className="text-white mb-1">Your message</label>
@@ -124,23 +127,23 @@ export default function ChatForma() {
                     </div>
 
                     <div className="flex gap-2">
-                        {/* 📎 Upload PDFs */}
+                        {/* Upload fajlova */}
                         <label
                             className={`bg-white text-yellow-700 px-3 py-2 rounded cursor-pointer hover:bg-gray-100 flex items-center justify-center ${isUploading ? "opacity-50 pointer-events-none" : ""
                                 }`}
-                            title="Upload PDF files"
+                            title="Upload PDF, TXT, MD files"
                         >
                             {isUploading ? "⏳" : "📎"}
                             <input
                                 type="file"
                                 accept=".pdf,.txt,.md,text/plain,application/pdf,text/markdown"
                                 multiple
-                                onChange={handlePdfUpload}
+                                onChange={HandleFileUpload}
                                 className="hidden"
                             />
                         </label>
 
-                        {/* Send */}
+                        {/* Slanje poruke */}
                         <button
                             type="submit"
                             disabled={isUploading}
@@ -152,5 +155,6 @@ export default function ChatForma() {
                 </div>
             </form>
         </div>
+
     );
 }
