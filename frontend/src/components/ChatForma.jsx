@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios"
 import Navbar from "./NavBar";
 
@@ -9,6 +9,37 @@ export default function ChatForma() {
     const [message, setMessage] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
+    const [uploadedFiles, setUploadedFiles] = useState([]);
+
+    useEffect(() => {
+        const fetchUploadedFiles = async () => {
+            try {
+                const token = localStorage.getItem("token");
+
+                const { data } = await axios.get(
+                    "http://localhost:3000/api/document",
+                    {
+                        headers: {
+                            Authorization: `Bearer ${token}`,
+                        },
+                    }
+                );
+
+                setUploadedFiles(
+                data.data.map((file) => ({
+                    id: file.id,
+                    name: file.fileName,
+                    type: file.fileType,
+                }))
+            );
+            } catch (err) {
+                console.error("Failed to load uploaded files", err);
+            }
+        };
+
+        fetchUploadedFiles();
+    }, []);
+
 
     // Upload vise fajlova (PDF, TXT, MD)
     const HandleFileUpload = async (e) => {
@@ -42,7 +73,14 @@ export default function ChatForma() {
                     }
                 )
 
-                console.log("Uploaded:", data)
+                setUploadedFiles((prev) => [
+                    ...prev,
+                    {
+                        name: file.name,
+                        size: (file.size / 1024).toFixed(1) + " KB",
+                        type: fileExtension,
+                    }
+                ]);
             }
         } catch (error) {
             if (error.response) {
@@ -60,28 +98,51 @@ export default function ChatForma() {
     }
 
 
-    // Chat submit (tekst samo)
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         if (!message.trim()) return;
 
+        const userMessage = message;
+
         setMessages((prev) => [
             ...prev,
-            { sender: "user", text: message },
+            { sender: "user", text: userMessage },
         ]);
 
         setMessage("");
         setIsLoading(true);
 
-        // simulacija AI odgovora
-        setTimeout(() => {
+        try {
+            const token = localStorage.getItem("token");
+
+            const { data } = await axios.post(
+                "http://localhost:3000/api/questions",
+                { query: userMessage },
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                }
+            );
+
             setMessages((prev) => [
                 ...prev,
-                { sender: "bot", text: "This is a sample AI response" },
+                { sender: "bot", text: data.data.answer },
             ]);
+        } catch (error) {
+            console.error(error);
+            setMessages((prev) => [
+                ...prev,
+                {
+                    sender: "bot",
+                    text: "Error talking to AI",
+                },
+            ]);
+        } finally {
             setIsLoading(false);
-        }, 1000);
+        }
     };
+
 
     return (
         <div className="bg-yellow-700 p-6 rounded-lg shadow-lg w-2/3 max-w-full h-3/4 flex flex-col">
@@ -98,8 +159,8 @@ export default function ChatForma() {
                         <div
                             key={index}
                             className={`max-w-[80%] p-2 rounded-lg text-sm break-words ${msg.sender === "user"
-                                    ? "bg-white text-yellow-700 ml-auto"
-                                    : "bg-yellow-800 text-white mr-auto"
+                                ? "bg-white text-yellow-700 ml-auto"
+                                : "bg-yellow-800 text-white mr-auto"
                                 }`}
                         >
                             {msg.text}
@@ -112,6 +173,30 @@ export default function ChatForma() {
                         </div>
                     )}
                 </div>
+                {/* Prikaz uploadovanih fajlova */}
+                {uploadedFiles.length > 0 && (
+                    <div className="bg-yellow-500 rounded p-2 mt-3">
+                        <p className="text-white text-sm font-semibold mb-1">
+                            Uploaded files:
+                        </p>
+
+                        <ul className="space-y-1 max-h-24 overflow-y-auto">
+                            {uploadedFiles.map((file, index) => (
+                                <li
+                                    key={index}
+                                    className="text-white text-xs flex justify-between items-center bg-yellow-600 px-2 py-1 rounded"
+                                >
+                                    <span className="truncate max-w-[70%]">
+                                        📄 {file.name}
+                                    </span>
+                                    <span className="opacity-80 ml-2 whitespace-nowrap">
+                                        {file.size}
+                                    </span>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
 
                 {/* Input i dugme */}
                 <div className="mt-4 space-y-3">
