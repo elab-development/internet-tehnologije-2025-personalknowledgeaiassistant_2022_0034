@@ -22,7 +22,8 @@
     "langchain": "^0.2.15",
     "multer": "^2.0.2",
     "ollama": "^0.6.3",
-    "pdf-parse-fork": "^1.2.0"
+    "pdf-parse-fork": "^1.2.0",
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.11",

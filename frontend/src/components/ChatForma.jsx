@@ -1,245 +1,230 @@
 import { useState, useEffect } from "react";
-import axios from "axios"
+import axios from "axios";
 import Navbar from "./NavBar";
 
 export default function ChatForma() {
-    const [messages, setMessages] = useState([
-        { sender: "bot", text: "Hello! How can I help you?" },
-    ]);
-    const [message, setMessage] = useState("");
-    const [isLoading, setIsLoading] = useState(false);
-    const [isUploading, setIsUploading] = useState(false);
-    const [uploadedFiles, setUploadedFiles] = useState([]);
+  const [messages, setMessages] = useState([
+    { sender: "bot", text: "Hello! How can I help you?" },
+  ]);
+  const [message, setMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState([]);
 
-    useEffect(() => {
-        const fetchUploadedFiles = async () => {
-            try {
-                const token = localStorage.getItem("token");
+  const fetchUploadedFiles = async () => {
+    try {
+      const token = localStorage.getItem("token");
 
-                const { data } = await axios.get(
-                    "http://localhost:3000/api/document",
-                    {
-                        headers: {
-                            Authorization: `Bearer ${token}`,
-                        },
-                    }
-                );
+      const { data } = await axios.get("http://localhost:3000/api/document", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-                setUploadedFiles(
-                data.data.map((file) => ({
-                    id: file.id,
-                    name: file.fileName,
-                    type: file.fileType,
-                }))
-            );
-            } catch (err) {
-                console.error("Failed to load uploaded files", err);
-            }
-        };
-
-        fetchUploadedFiles();
-    }, []);
-
-
-    // Upload vise fajlova (PDF, TXT, MD)
-    const HandleFileUpload = async (e) => {
-        const files = Array.from(e.target.files)
-        if (!files.length) return
-
-        setIsUploading(true)
-
-        try {
-            const token = localStorage.getItem("token")
-
-            for (const file of files) {
-                const allowedExtensions = [".pdf", ".txt", ".md"];
-                const fileExtension = "." + file.name.split(".").pop().toLowerCase();
-
-                if (!allowedExtensions.includes(fileExtension)) continue;
-
-                const formData = new FormData()
-                formData.append("file", file)
-
-                console.log("Uploading:", file.name)
-
-                const { data } = await axios.post(
-                    "http://localhost:3000/api/document",
-                    formData,
-                    {
-                        headers: {
-                            Authorization: `Bearer ${token}`,
-                            "Content-Type": "multipart/form-data"
-                        },
-                    }
-                )
-
-                setUploadedFiles((prev) => [
-                    ...prev,
-                    {
-                        name: file.name,
-                        size: (file.size / 1024).toFixed(1) + " KB",
-                        type: fileExtension,
-                    }
-                ]);
-            }
-        } catch (error) {
-            if (error.response) {
-                console.error(
-                    "File upload failed:",
-                    error.response.data?.message || error.message
-                )
-            } else {
-                console.error("File upload failed:", error.message)
-            }
-        } finally {
-            setIsUploading(false)
-            e.target.value = ""; // Reset input fajlova
-        }
+      setUploadedFiles(
+        data.data.map((file) => ({
+          id: file.id,
+          name: file.fileName,
+          type: file.fileType,
+        })),
+      );
+    } catch (err) {
+      console.error("Failed to load uploaded files", err);
     }
+  };
+  useEffect(() => {
+    fetchUploadedFiles();
+  }, [uploadedFiles]);
 
+  // Upload vise fajlova (PDF, TXT, MD)
+  const HandleFileUpload = async (e) => {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        if (!message.trim()) return;
+    setIsUploading(true);
 
-        const userMessage = message;
+    try {
+      const token = localStorage.getItem("token");
 
-        setMessages((prev) => [
-            ...prev,
-            { sender: "user", text: userMessage },
+      for (const file of files) {
+        const allowedExtensions = [".pdf", ".txt", ".md"];
+        const fileExtension = "." + file.name.split(".").pop().toLowerCase();
+
+        if (!allowedExtensions.includes(fileExtension)) continue;
+
+        const formData = new FormData();
+        formData.append("file", file);
+
+        console.log("Uploading:", file.name);
+
+        const { data } = await axios.post(
+          "http://localhost:3000/api/document",
+          formData,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "multipart/form-data",
+            },
+          },
+        );
+
+        setUploadedFiles((prev) => [
+          ...prev,
+          {
+            name: file.name,
+            size: (file.size / 1024).toFixed(1) + " KB",
+            type: fileExtension,
+          },
         ]);
+      }
+    } catch (error) {
+      if (error.response) {
+        console.error(
+          "File upload failed:",
+          error.response.data?.message || error.message,
+        );
+      } else {
+        console.error("File upload failed:", error.message);
+      }
+    } finally {
+      setIsUploading(false);
+      e.target.value = ""; // Reset input fajlova
+    }
+  };
 
-        setMessage("");
-        setIsLoading(true);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!message.trim()) return;
 
-        try {
-            const token = localStorage.getItem("token");
+    const userMessage = message;
 
-            const { data } = await axios.post(
-                "http://localhost:3000/api/questions",
-                { query: userMessage },
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                }
-            );
+    setMessages((prev) => [...prev, { sender: "user", text: userMessage }]);
 
-            setMessages((prev) => [
-                ...prev,
-                { sender: "bot", text: data.data.answer },
-            ]);
-        } catch (error) {
-            console.error(error);
-            setMessages((prev) => [
-                ...prev,
-                {
-                    sender: "bot",
-                    text: "Error talking to AI",
-                },
-            ]);
-        } finally {
-            setIsLoading(false);
-        }
-    };
+    setMessage("");
+    setIsLoading(true);
 
+    try {
+      const token = localStorage.getItem("token");
 
-    return (
-        <div className="bg-yellow-700 p-6 rounded-lg shadow-lg w-2/3 max-w-full h-3/4 flex flex-col">
-            <Navbar />
+      const { data } = await axios.post(
+        "http://localhost:3000/api/questions",
+        { query: userMessage },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
 
-            <h2 className="text-white text-xl text-center mb-4">
-                AI Chat
-            </h2>
+      setMessages((prev) => [
+        ...prev,
+        { sender: "bot", text: data.data.answer },
+      ]);
+    } catch (error) {
+      console.error(error);
+      setMessages((prev) => [
+        ...prev,
+        {
+          sender: "bot",
+          text: "Error talking to AI",
+        },
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-            <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
-                {/* Chat poruke */}
-                <div className="bg-yellow-600 rounded p-3 flex-1 min-h-0 overflow-y-auto space-y-2">
-                    {messages.map((msg, index) => (
-                        <div
-                            key={index}
-                            className={`max-w-[80%] p-2 rounded-lg text-sm break-words ${msg.sender === "user"
-                                ? "bg-white text-yellow-700 ml-auto"
-                                : "bg-yellow-800 text-white mr-auto"
-                                }`}
-                        >
-                            {msg.text}
-                        </div>
-                    ))}
+  return (
+    <div className="bg-yellow-700 p-6 rounded-lg shadow-lg w-2/3 max-w-full h-3/4 flex flex-col">
+      <Navbar />
 
-                    {isLoading && (
-                        <div className="text-white text-sm italic">
-                            AI is typing...
-                        </div>
-                    )}
-                </div>
-                {/* Prikaz uploadovanih fajlova */}
-                {uploadedFiles.length > 0 && (
-                    <div className="bg-yellow-500 rounded p-2 mt-3">
-                        <p className="text-white text-sm font-semibold mb-1">
-                            Uploaded files:
-                        </p>
+      <h2 className="text-white text-xl text-center mb-4">AI Chat</h2>
 
-                        <ul className="space-y-1 max-h-24 overflow-y-auto">
-                            {uploadedFiles.map((file, index) => (
-                                <li
-                                    key={index}
-                                    className="text-white text-xs flex justify-between items-center bg-yellow-600 px-2 py-1 rounded"
-                                >
-                                    <span className="truncate max-w-[70%]">
-                                        📄 {file.name}
-                                    </span>
-                                    <span className="opacity-80 ml-2 whitespace-nowrap">
-                                        {file.size}
-                                    </span>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                )}
+      <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+        {/* Chat poruke */}
+        <div className="bg-yellow-600 rounded p-3 flex-1 min-h-0 overflow-y-auto space-y-2">
+          {messages.map((msg, index) => (
+            <div
+              key={index}
+              className={`max-w-[80%] p-2 rounded-lg text-sm break-words ${
+                msg.sender === "user"
+                  ? "bg-white text-yellow-700 ml-auto"
+                  : "bg-yellow-800 text-white mr-auto"
+              }`}
+            >
+              {msg.text}
+            </div>
+          ))}
 
-                {/* Input i dugme */}
-                <div className="mt-4 space-y-3">
-                    <div className="flex flex-col">
-                        <label className="text-white mb-1">Your message</label>
-                        <input
-                            type="text"
-                            value={message}
-                            onChange={(e) => setMessage(e.target.value)}
-                            placeholder="Type a message..."
-                            className="p-2 rounded outline-none"
-                        />
-                    </div>
-
-                    <div className="flex gap-2">
-                        {/* Upload fajlova */}
-                        <label
-                            className={`bg-white text-yellow-700 px-3 py-2 rounded cursor-pointer hover:bg-gray-100 flex items-center justify-center ${isUploading ? "opacity-50 pointer-events-none" : ""
-                                }`}
-                            title="Upload PDF, TXT, MD files"
-                        >
-                            {isUploading ? "⏳" : "📎"}
-                            <input
-                                type="file"
-                                accept=".pdf,.txt,.md,text/plain,application/pdf,text/markdown"
-                                multiple
-                                onChange={HandleFileUpload}
-                                className="hidden"
-                            />
-                        </label>
-
-                        {/* Slanje poruke */}
-                        <button
-                            type="submit"
-                            disabled={isUploading}
-                            className="flex-1 bg-white text-yellow-700 font-semibold py-2 rounded hover:bg-gray-100 disabled:opacity-50"
-                        >
-                            Send
-                        </button>
-                    </div>
-                </div>
-            </form>
+          {isLoading && (
+            <div className="text-white text-sm italic">AI is typing...</div>
+          )}
         </div>
+        {/* Prikaz uploadovanih fajlova */}
+        {uploadedFiles.length > 0 && (
+          <div className="bg-yellow-500 rounded p-2 mt-3">
+            <p className="text-white text-sm font-semibold mb-1">
+              Uploaded files:
+            </p>
 
-    );
+            <ul className="space-y-1 max-h-24 overflow-y-auto">
+              {uploadedFiles.map((file, index) => (
+                <li
+                  key={index}
+                  className="text-white text-xs flex justify-between items-center bg-yellow-600 px-2 py-1 rounded"
+                >
+                  <span className="truncate max-w-[70%]">📄 {file.name}</span>
+                  <span className="opacity-80 ml-2 whitespace-nowrap">
+                    {file.size}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Input i dugme */}
+        <div className="mt-4 space-y-3">
+          <div className="flex flex-col">
+            <label className="text-white mb-1">Your message</label>
+            <input
+              type="text"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="Type a message..."
+              className="p-2 rounded outline-none"
+            />
+          </div>
+
+          <div className="flex gap-2">
+            {/* Upload fajlova */}
+            <label
+              className={`bg-white text-yellow-700 px-3 py-2 rounded cursor-pointer hover:bg-gray-100 flex items-center justify-center ${
+                isUploading ? "opacity-50 pointer-events-none" : ""
+              }`}
+              title="Upload PDF, TXT, MD files"
+            >
+              {isUploading ? "⏳" : "📎"}
+              <input
+                type="file"
+                accept=".pdf,.txt,.md,text/plain,application/pdf,text/markdown"
+                multiple
+                onChange={HandleFileUpload}
+                className="hidden"
+              />
+            </label>
+
+            {/* Slanje poruke */}
+            <button
+              type="submit"
+              disabled={isUploading}
+              className="flex-1 bg-white text-yellow-700 font-semibold py-2 rounded hover:bg-gray-100 disabled:opacity-50"
+            >
+              Send
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  );
 }

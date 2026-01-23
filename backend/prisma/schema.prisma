@@ -44,7 +44,7 @@ model Segment {
   content     String
   order       Int
 
-  embedding   Float[]
+  embedding   Unsupported("vector(768)")
 
   documentId  String
   document    Document   @relation(fields: [documentId], references: [id], onDelete: Cascade)

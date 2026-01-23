@@ -1,52 +1,56 @@
 import prisma from "../config/prisma.js";
 import { Ollama } from "@langchain/community/llms/ollama";
-import { cosineSimilarity } from "../utils/embedding.js";
 import { getEmbedding } from "../utils/embedding.js";
+import { normalize } from "../utils/embedding.js";
 
 const llm = new Ollama({
   model: "llama3",
   baseUrl: "http://localhost:11434",
-  temperature: 0,
+  system: `
+Ti si AI asistent za odgovaranje na pitanja na osnovu dokumenata.
+Odgovaraj isključivo koristeći dati kontekst.
+Ako odgovor ne postoji ili nije naveden u kontekstu, odgovori tacno recenicom:
+"Informacija nije pronadjena u dokumentima."
+`,
+  temperature: 0.1,
+  top_p: 0.9,
 });
 
-const MAX_SEGMENTS = 5;
+const TOP_K = 10;
 
 export const createQuestion = async (userId, query) => {
-  const questionEmbedding = await getEmbedding(query);
-
   const question = await prisma.question.create({
     data: { query, answer: "", userId },
   });
 
-  const segments = await prisma.segment.findMany({
-    where: { document: { userId } },
-  });
+  const raw = await getEmbedding(query);
+  const questionEmbedding = normalize(raw);
 
-  const rankedSegments = segments
-    .map((s) => ({
-      ...s,
-      score: cosineSimilarity(questionEmbedding, s.embedding),
-    }))
-    .sort((a, b) => b.score - a.score)
-    .slice(0, MAX_SEGMENTS);
+  const segments = await prisma.$queryRaw`
+  SELECT content
+  FROM "Segment" s
+  JOIN "Document" d ON d.id = s."documentId"
+  WHERE d."userId" = ${userId}
+  ORDER BY s.embedding <-> ${`[${questionEmbedding.join(",")}]`}::vector
+  LIMIT ${TOP_K}
+`;
 
-  const context = rankedSegments.map((s) => s.content).join("\n\n");
+  const context = segments.map((s) => s.content).join("\n\n");
 
   const prompt = `
-Odgovaraj samo na osnovu sledeceg konteksta koji pripada korisniku.
-Ako odgovor ne postoji u kontekstu, reci: "Informacija nije pronađena u dokumentima".
-
 KONTEKST:
 ${context}
 
 PITANJE:
 ${query}
+
+Odgovori jasno i precizno, koristeći samo informacije iz konteksta.
+Ako informacije ne postoje u kotekstu napisi samo: Inforamcija nije pronadjena u dokumentima.
 `;
 
   let answer = await llm.invoke(prompt);
 
-  if (!answer || answer.length < 5 || answer.toLowerCase().includes("informacija nije pronađena u dokumentima"))
-    answer = "Informacija nije pronađena u dokumentima";
+  if (!answer || answer.toLocaleLowerCase().includes("nije definisan") || answer.toLocaleLowerCase().includes("nije pronadjen")) answer = "Informacija nije pronađena u dokumentima";
 
   await prisma.question.update({
     where: { id: question.id },

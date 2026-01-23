@@ -3,6 +3,8 @@ import fs from "fs";
 import path from "path";
 import { parseDocument } from "../utils/parser.js";
 import { OllamaEmbeddings } from "@langchain/community/embeddings/ollama";
+import { normalize } from "../utils/embedding.js";
+import { v4 as uuid } from "uuid";
 
 const UPLOAD_DIR = "./uploads";
 
@@ -29,20 +31,25 @@ export const createDocument = async (userId, file) => {
     },
   });
 
-  const segmentsContent = parseDocument(filePath);
+  const segmentsContent = await parseDocument(filePath);
 
   for (let i = 0; i < segmentsContent.length; i++) {
     const segmentText = segmentsContent[i];
-    const embedding = await embeddings.embedQuery(segmentText);
 
-    await prisma.segment.create({
-      data: {
-        content: segmentText,
-        order: i + 1,
-        embedding, 
-        documentId: document.id,
-      },
-    });
+    const raw = await embeddings.embedDocuments([segmentText]);
+    const embedding = normalize(raw[0]);
+
+    await prisma.$executeRaw`
+  INSERT INTO "Segment" ("id", "content", "order", "embedding", "documentId", "createdAt")
+  VALUES (
+    ${uuid()},
+    ${segmentText},
+    ${i + 1},
+    ${`[${embedding.join(",")}]`}::vector,
+    ${document.id},
+    now()
+  )
+`;
   }
 
   return document;

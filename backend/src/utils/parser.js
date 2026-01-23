@@ -1,27 +1,51 @@
-import fs from 'fs';
-import pdf from 'pdf-parse-fork';
+import fs from "fs";
+import pdf from "pdf-parse-fork";
 
-/**
- * Funkcija koja parsira PDF, TXT ili MD fajl u niz segmenata
- * @param {string} filePath - putanja do fajla
- * @returns {string[]} - niz segmenata
- */
-export const parseDocument = (filePath) => {
-  const ext = filePath.split('.').pop().toLowerCase();
-  let content = '';
+const cleanText = (text) => {
+  return text
+    .replace(/\s+/g, " ")
+    .replace(/\u0000/g, "")
+    .trim();
+};
 
-  if (ext === 'pdf') {
-    const dataBuffer = fs.readFileSync(filePath);
-    const data = pdf(dataBuffer);
-    return data.then(res => {
-      const text = res.text;
-      const segments = text.split(/\n\n|\r\n\r\n/).filter(s => s.trim().length > 0);
-      return segments;
-    });
-  } else {
-    // TXT ili MD fajl
-    content = fs.readFileSync(filePath, 'utf-8');
-    const segments = content.split(/\n\n|\r\n\r\n/).filter(s => s.trim().length > 0);
-    return segments;
+const chunkText = (text, chunkSize = 600, overlap = 100) => {
+  const words = text.split(" ");
+  const chunks = [];
+
+  if (words.length <= chunkSize) {
+    return [text];
   }
+
+  for (let i = 0; i < words.length; i += chunkSize - overlap) {
+    const chunk = words.slice(i, i + chunkSize).join(" ");
+    if (chunk.length > 50) {
+      chunks.push(chunk);
+    }
+  }
+
+  return chunks;
+};
+
+export const parseDocument = async (filePath) => {
+  const ext = filePath.split(".").pop().toLowerCase();
+  let text = "";
+
+  // PDF
+  if (ext === "pdf") {
+    const buffer = fs.readFileSync(filePath);
+    const data = await pdf(buffer);
+    text = data.text;
+  }
+  // TXT / MD
+  else {
+    text = fs.readFileSync(filePath, "utf-8");
+  }
+
+  text = cleanText(text);
+
+  if (!text || text.length < 50) {
+    return [];
+  }
+
+  return chunkText(text, 600, 100);
 };
