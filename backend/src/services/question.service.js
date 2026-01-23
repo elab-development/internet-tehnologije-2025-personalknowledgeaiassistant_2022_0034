@@ -7,16 +7,13 @@ const llm = new Ollama({
   model: "llama3",
   baseUrl: "http://localhost:11434",
   system: `
-Ti si AI asistent za odgovaranje na pitanja na osnovu dokumenata.
-Odgovaraj isključivo koristeći dati kontekst.
-Ako odgovor ne postoji ili nije naveden u kontekstu, odgovori tacno recenicom:
-"Informacija nije pronadjena u dokumentima."
+Odgovaraj isključivo koristeći dati kontekst."
 `,
   temperature: 0.1,
   top_p: 0.9,
 });
 
-const TOP_K = 10;
+const TOP_K = 5;
 
 export const createQuestion = async (userId, query) => {
   const question = await prisma.question.create({

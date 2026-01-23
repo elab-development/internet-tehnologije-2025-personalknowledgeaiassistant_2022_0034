@@ -8,7 +8,7 @@ const cleanText = (text) => {
     .trim();
 };
 
-const chunkText = (text, chunkSize = 600, overlap = 100) => {
+const chunkText = (text, chunkSize = 300, overlap = 40) => {
   const words = text.split(" ");
   const chunks = [];
 
@@ -18,7 +18,7 @@ const chunkText = (text, chunkSize = 600, overlap = 100) => {
 
   for (let i = 0; i < words.length; i += chunkSize - overlap) {
     const chunk = words.slice(i, i + chunkSize).join(" ");
-    if (chunk.length > 50) {
+    if (chunk.length > 25) {
       chunks.push(chunk);
     }
   }
@@ -43,9 +43,9 @@ export const parseDocument = async (filePath) => {
 
   text = cleanText(text);
 
-  if (!text || text.length < 50) {
+  if (!text || text.length < 20) {
     return [];
   }
 
-  return chunkText(text, 600, 100);
+  return chunkText(text, 300, 40);
 };
