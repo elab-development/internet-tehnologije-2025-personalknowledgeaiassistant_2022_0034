@@ -5,5 +5,6 @@
 
 */
 -- AlterTable
+CREATE EXTENSION IF NOT EXISTS vector;
 ALTER TABLE "Segment" DROP COLUMN "embedding",
 ADD COLUMN     "embedding" vector(768) NOT NULL;
