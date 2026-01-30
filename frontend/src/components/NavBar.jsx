@@ -8,43 +8,47 @@ export default function Navbar() {
     navigate("/", { replace: true });
   };
 
-  return (
-    <nav className="bg-yellow-800 text-white px-6 py-3 flex justify-between items-center shadow-md mb-4 rounded-lg">
-      <div className="font-bold text-lg">
-        AI Assistant
-      </div>
+ return (
+  <nav className="bg-slate-800 text-slate-100 px-6 py-3 flex justify-between items-center shadow-md">
+    <div className="font-bold text-lg tracking-wide">
+      AI Assistant
+    </div>
 
-      {/* Linkovi */}
-      <div className="flex gap-4 items-center">
-        <NavLink
-          to="/chat"
-          className={({ isActive }) =>
-            `px-3 py-1 rounded font-semibold ${
-              isActive ? "bg-yellow-600" : "hover:bg-yellow-700"
-            }`
-          }
-        >
-          Chat
-        </NavLink>
+    {/* Linkovi */}
+    <div className="flex gap-4 items-center">
+      <NavLink
+        to="/chat"
+        className={({ isActive }) =>
+          `px-4 py-1.5 rounded-lg font-semibold transition ${
+            isActive
+              ? "bg-indigo-500 text-white"
+              : "hover:bg-slate-700 text-slate-200"
+          }`
+        }
+      >
+        Chat
+      </NavLink>
 
-        <NavLink
-          to="/profile"
-          className={({ isActive }) =>
-            `px-3 py-1 rounded font-semibold ${
-              isActive ? "bg-yellow-600" : "hover:bg-yellow-700"
-            }`
-          }
-        >
-          Profile
-        </NavLink>
+      <NavLink
+        to="/profile"
+        className={({ isActive }) =>
+          `px-4 py-1.5 rounded-lg font-semibold transition ${
+            isActive
+              ? "bg-indigo-500 text-white"
+              : "hover:bg-slate-700 text-slate-200"
+          }`
+        }
+      >
+        Profile
+      </NavLink>
 
-        <button
-          onClick={handleLogout}
-          className="bg-red-500 px-3 py-1 rounded hover:bg-red-600 text-sm font-semibold"
-        >
-          Logout
-        </button>
-      </div>
-    </nav>
-  );
+      <button
+        onClick={handleLogout}
+        className="bg-rose-500 px-4 py-1.5 rounded-lg hover:bg-rose-600 text-sm font-semibold transition"
+      >
+        Logout
+      </button>
+    </div>
+  </nav>
+);
 }

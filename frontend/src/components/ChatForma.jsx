@@ -71,6 +71,7 @@ export default function ChatForma() {
         setUploadedFiles((prev) => [
           ...prev,
           {
+            id: data.id,
             name: file.name,
             size: (file.size / 1024).toFixed(1) + " KB",
             type: fileExtension,
@@ -134,97 +135,169 @@ export default function ChatForma() {
     }
   };
 
+  const handleDeleteFile = async (fileId) => {
+    try {
+      const token = localStorage.getItem("token");
+
+      await axios.delete(`http://localhost:3000/api/document/${fileId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      setUploadedFiles((prev) => prev.filter((file) => file.id !== fileId));
+    } catch (err) {
+      console.error("Failed to delete file", err);
+    }
+  };
+
   return (
-    <div className="bg-yellow-700 p-6 rounded-lg shadow-lg w-2/3 max-w-full h-3/4 flex flex-col">
+    <div className="min-h-screen bg-slate-900 flex flex-col">
+      {/* Navbar skroz gore */}
       <Navbar />
 
-      <h2 className="text-white text-xl text-center mb-4">AI Chat</h2>
+      {/* Glavni sadržaj */}
+      <div className="flex flex-1 gap-6 p-6 max-w-7xl mx-auto w-full">
+        {/* Sidebar */}
+        <aside className="w-[20%] min-w-[220px] bg-slate-800 rounded-xl p-4 flex flex-col gap-6 shadow-lg">
+          {/* Chat istorija */}
+          <div>
+            <h3 className="text-slate-200 font-semibold mb-2 text-sm">
+              💬 Chat History
+            </h3>
+            <ul className="space-y-2 text-sm max-h-48 overflow-y-auto">
+              <li className="bg-slate-700 text-slate-200 px-3 py-2 rounded cursor-pointer hover:bg-slate-600">
+                New chat
+              </li>
+              <li className="bg-slate-700 text-slate-200 px-3 py-2 rounded opacity-70">
+                Previous chat
+              </li>
+            </ul>
+          </div>
 
-      <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
-        {/* Chat poruke */}
-        <div className="bg-yellow-600 rounded p-3 flex-1 min-h-0 overflow-y-auto space-y-2">
-          {messages.map((msg, index) => (
-            <div
-              key={index}
-              className={`max-w-[80%] p-2 rounded-lg text-sm break-words ${
-                msg.sender === "user"
-                  ? "bg-white text-yellow-700 ml-auto"
-                  : "bg-yellow-800 text-white mr-auto"
-              }`}
-            >
-              {msg.text}
-            </div>
-          ))}
-
-          {isLoading && (
-            <div className="text-white text-sm italic">AI is typing...</div>
-          )}
-        </div>
-        {/* Prikaz uploadovanih fajlova */}
-        {uploadedFiles.length > 0 && (
-          <div className="bg-yellow-500 rounded p-2 mt-3">
-            <p className="text-white text-sm font-semibold mb-1">
-              Uploaded files:
-            </p>
-
-            <ul className="space-y-1 max-h-24 overflow-y-auto">
-              {uploadedFiles.map((file, index) => (
+          {/* Uploadovani fajlovi */}
+          <div>
+            <h3 className="text-slate-200 font-semibold mb-2 text-sm">
+              {" "}
+              📁 Files{" "}
+            </h3>
+            <ul className="space-y-2 text-sm max-h-48 overflow-y-auto">
+              {uploadedFiles.map((file) => (
                 <li
-                  key={index}
-                  className="text-white text-xs flex justify-between items-center bg-yellow-600 px-2 py-1 rounded"
+                  key={file.id}
+                  className="bg-slate-700 text-slate-200 text-xs px-3 py-1.5 rounded flex justify-between items-center"
                 >
-                  <span className="truncate max-w-[70%]">📄 {file.name}</span>
-                  <span className="opacity-80 ml-2 whitespace-nowrap">
-                    {file.size}
-                  </span>
+                  <span className="truncate max-w-[70%]">{file.name}</span>
+
+                  <div className="flex items-center gap-1">
+                    <span className="opacity-60 text-[10px]">{file.size}</span>
+
+                    <button
+                      onClick={() => handleDeleteFile(file.id)}
+                      className="
+    w-5 h-5
+    bg-red-500
+    rounded
+    flex items-center justify-center
+    hover:bg-red-600
+    transition
+  "
+                      title="Delete file"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="white"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="w-3.5 h-3.5"
+                      >
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                      </svg>
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>
           </div>
-        )}
+        </aside>
 
-        {/* Input i dugme */}
-        <div className="mt-4 space-y-3">
-          <div className="flex flex-col">
-            <label className="text-white mb-1">Your message</label>
-            <input
-              type="text"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="Type a message..."
-              className="p-2 rounded outline-none"
-            />
-          </div>
+        {/* Chat */}
+        <main className="flex-1 bg-slate-800 rounded-xl shadow-lg p-6 flex flex-col">
+          <h2 className="text-slate-100 text-lg font-semibold text-center mb-4">
+            AI Chat
+          </h2>
 
-          <div className="flex gap-2">
-            {/* Upload fajlova */}
-            <label
-              className={`bg-white text-yellow-700 px-3 py-2 rounded cursor-pointer hover:bg-gray-100 flex items-center justify-center ${
-                isUploading ? "opacity-50 pointer-events-none" : ""
-              }`}
-              title="Upload PDF, TXT, MD files"
-            >
-              {isUploading ? "⏳" : "📎"}
+          <form
+            onSubmit={handleSubmit}
+            className="flex flex-col flex-1 min-h-0"
+          >
+            {/* Poruke */}
+            <div className="flex-1 overflow-y-auto space-y-3 bg-slate-700 rounded-lg p-4">
+              {messages.map((msg, index) => (
+                <div
+                  key={index}
+                  className={`max-w-[75%] px-4 py-2 rounded-xl text-sm ${
+                    msg.sender === "user"
+                      ? "bg-indigo-500 text-white ml-auto"
+                      : "bg-slate-600 text-slate-100 mr-auto"
+                  }`}
+                >
+                  {msg.text}
+                </div>
+              ))}
+
+              {isLoading && (
+                <div className="text-slate-300 text-sm italic">
+                  AI is typing...
+                </div>
+              )}
+            </div>
+
+            {/* Input */}
+            <div className="mt-4 space-y-3">
               <input
-                type="file"
-                accept=".pdf,.txt,.md,text/plain,application/pdf,text/markdown"
-                multiple
-                onChange={HandleFileUpload}
-                className="hidden"
+                type="text"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Type your message..."
+                className="w-full bg-slate-900 text-slate-100 px-4 py-2 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
               />
-            </label>
 
-            {/* Slanje poruke */}
-            <button
-              type="submit"
-              disabled={isUploading}
-              className="flex-1 bg-white text-yellow-700 font-semibold py-2 rounded hover:bg-gray-100 disabled:opacity-50"
-            >
-              Send
-            </button>
-          </div>
-        </div>
-      </form>
+              <div className="flex gap-2">
+                {/* Upload */}
+                <label
+                  className={`bg-slate-700 text-slate-200 px-4 py-2 rounded-lg cursor-pointer hover:bg-slate-600 flex items-center justify-center ${
+                    isUploading ? "opacity-50 pointer-events-none" : ""
+                  }`}
+                  title="Upload files"
+                >
+                  {isUploading ? "⏳" : "📎"}
+                  <input
+                    type="file"
+                    accept=".pdf,.txt,.md"
+                    multiple
+                    onChange={HandleFileUpload}
+                    className="hidden"
+                  />
+                </label>
+
+                {/* Send */}
+                <button
+                  type="submit"
+                  disabled={isUploading}
+                  className="flex-1 bg-indigo-500 text-white font-semibold py-2 rounded-lg hover:bg-indigo-600 disabled:opacity-50"
+                >
+                  Send
+                </button>
+              </div>
+            </div>
+          </form>
+        </main>
+      </div>
     </div>
   );
 }

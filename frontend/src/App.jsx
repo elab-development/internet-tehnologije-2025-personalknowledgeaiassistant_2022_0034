@@ -9,7 +9,6 @@ function App() {
   const [isRegistering, setIsRegistering] = useState(false) // State za prebacivanje između login i register
 
   return (
-    <main className="bg-yellow-200 h-screen flex items-center justify-center">
       <Routes>
 
         <Route path="/" element={
@@ -34,7 +33,6 @@ function App() {
           }
         />
       </Routes>
-    </main>
   )
 }
 
