@@ -7,6 +7,7 @@ const router = Router();
 
 router.get("/me", authMiddleware, userController.profile);
 router.put("/me", authMiddleware, userController.update);
+router.get("/",authMiddleware, requireAdmin, userController.getAllUsers);
 
 router.put("/:id", authMiddleware, requireAdmin, userController.updateUserByAdmin);
 router.delete("/:id", authMiddleware, requireAdmin, userController.deleteUserByAdmin); 

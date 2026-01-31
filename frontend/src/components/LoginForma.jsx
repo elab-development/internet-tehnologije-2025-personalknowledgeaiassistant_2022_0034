@@ -81,7 +81,11 @@ export default function LoginForma(props) {
           localStorage.setItem("token", data.data.token);
 
           if (!props.isRegistering) {
-            navigate("/chat");
+            if (data.data.user.role === "ADMIN") {
+              navigate("/admin/users");
+            } else {
+              navigate("/chat");
+            }
           } else {
             props.setIsRegistering(!props.isRegistering);
           }
@@ -96,7 +100,7 @@ export default function LoginForma(props) {
           setServerError(data.message || "An error occurred");
         }
       } catch (err) {
-        setServerError("Cannot connect to server");
+        setServerError("Cannot connect to server"+err);
       }
     }
   }

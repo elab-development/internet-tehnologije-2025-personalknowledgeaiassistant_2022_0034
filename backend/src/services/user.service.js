@@ -1,4 +1,4 @@
-import prisma from '../config/prisma.js';
+import prisma from "../config/prisma.js";
 
 export const getProfile = async (id) => {
   const user = await prisma.user.findUnique({
@@ -9,18 +9,18 @@ export const getProfile = async (id) => {
       firstName: true,
       lastName: true,
       role: true,
-      createdAt: true
-    }
+      createdAt: true,
+    },
   });
 
-  if (!user) return { error: 'User not found', status: 404 };
+  if (!user) return { error: "User not found", status: 404 };
   return user;
 };
 
 export const updateProfile = async (id, data) => {
   const user = await prisma.user.update({
     where: { id },
-    data
+    data,
   });
   return user;
 };
@@ -37,13 +37,28 @@ export const adminUpdateUser = async (userId, data) => {
       lastName: data.lastName,
       username: data.username,
       password: data.password,
-      role: data.role
-    }
+      role: data.role,
+    },
   });
 };
 
 export const adminDeleteUser = async (userId) => {
   return prisma.user.delete({
-    where: { id: userId }
+    where: { id: userId },
   });
+};
+
+export const getAllUsers = async () => {
+  const users = await prisma.user.findMany({
+    select: {
+      id: true,
+      username: true,
+      firstName: true,
+      lastName: true,
+      role: true,
+      createdAt: true,
+    },
+  });
+
+  return users;
 };
