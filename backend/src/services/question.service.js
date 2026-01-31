@@ -1,31 +1,15 @@
 import prisma from "../config/prisma.js";
 import { Ollama } from "@langchain/community/llms/ollama";
 import { getEmbedding, normalize } from "../utils/embedding.js";
-
-const llm = new Ollama({
-  model: "qwen2.5:7b",
-  baseUrl: "http://localhost:11434",
-  system: `
-You are an AI assistant that answers questions based on provided documents.
-Answer ONLY using the given context.
-If the answer does not exist or is not mentioned in the context, respond with exactly:
-"Information not found in documents."
-`,
-  temperature: 0,
-  top_p: 0.8,
-  numCtx: 2048,
-  numPredict: 128,
-  numGpu: 99,
-  numThread: -1,
-});
+import { getLLM } from "../config/llmFactory.js";
 
 const TOP_K = 5;
 
-export const createQuestion = async (userId, query) => {
+export const createQuestion = async (userId, query, model) => {
   const question = await prisma.question.create({
     data: { query, answer: "", userId },
   });
-
+  const llm = getLLM(model);
   const raw = await getEmbedding(query);
   const questionEmbedding = normalize(raw);
 
@@ -64,7 +48,14 @@ Return valid JSON only:
 Do NOT include any extra text outside the JSON.
 `;
 
-  let rawAnswer = await llm.invoke(prompt);
+  const rawAnswer = await llm.invoke(`
+You are an AI assistant that answers questions based on provided documents.
+Answer ONLY using the given context.
+If the answer does not exist or is not mentioned in the context, respond with exactly:
+"Information not found in documents."
+
+${prompt}
+`);
 
   let parsed;
   try {
