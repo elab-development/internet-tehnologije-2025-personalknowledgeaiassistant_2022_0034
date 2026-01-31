@@ -78,11 +78,10 @@ Do NOT include any extra text outside the JSON.
 
   let answer = parsed.answer || "Information not found in the documents";
 
-
   if (
     !parsed.answer ||
     parsed.answer.toLocaleLowerCase().includes("not defined") ||
-    parsed.answer.toLocaleLowerCase().includes("not found")||
+    parsed.answer.toLocaleLowerCase().includes("not found") ||
     parsed.answer.toLocaleLowerCase().includes("not mentioned")
   )
     answer = "Information not found in the documents";
