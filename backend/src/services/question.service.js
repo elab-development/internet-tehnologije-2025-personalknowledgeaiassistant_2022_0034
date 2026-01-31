@@ -1,7 +1,6 @@
 import prisma from "../config/prisma.js";
 import { Ollama } from "@langchain/community/llms/ollama";
-import { getEmbedding } from "../utils/embedding.js";
-import { normalize } from "../utils/embedding.js";
+import { getEmbedding, normalize } from "../utils/embedding.js";
 
 const llm = new Ollama({
   model: "qwen2.5:7b",
@@ -12,10 +11,10 @@ Answer ONLY using the given context.
 If the answer does not exist or is not mentioned in the context, respond with exactly:
 "Information not found in documents."
 `,
-  temperature: 0.1,
-  top_p: 0.9,
-  numCtx: 4096,
-  numPredict: 512,
+  temperature: 0,
+  top_p: 0.8,
+  numCtx: 2048,
+  numPredict: 128,
   numGpu: 99,
   numThread: -1,
 });
@@ -31,15 +30,21 @@ export const createQuestion = async (userId, query) => {
   const questionEmbedding = normalize(raw);
 
   const segments = await prisma.$queryRaw`
-  SELECT content
-  FROM "Segment" s
-  JOIN "Document" d ON d.id = s."documentId"
-  WHERE d."userId" = ${userId}
-  ORDER BY s.embedding <-> ${`[${questionEmbedding.join(",")}]`}::vector
-  LIMIT ${TOP_K}
-`;
+    SELECT 
+      s.id::text as "segmentId",
+      s.content,
+      s."documentId",
+      d."fileName"
+    FROM "Segment" s
+    JOIN "Document" d ON d.id = s."documentId"
+    WHERE d."userId" = ${userId}
+    ORDER BY s.embedding <-> ${`[${questionEmbedding.join(",")}]`}::vector
+    LIMIT ${TOP_K}
+  `;
 
-  const context = segments.map((s) => s.content).join("\n\n");
+  const context = segments
+    .map((s) => `SEGMENT_ID: ${s.segmentId}\n${s.content}`)
+    .join("\n\n");
 
   const prompt = `
 CONTEXT:
@@ -48,31 +53,97 @@ ${context}
 QUESTION:
 ${query}
 
-Answer clearly and precisely, using only information from the context.
-If the information is not present in the context, respond only with: Information not found in the documents.
+
+
+Return valid JSON only:
+{
+  "answer": "your answer here",
+  "usedSegments": ["segmentId1", "segmentId2"]
+}
+
+Do NOT include any extra text outside the JSON.
 `;
 
-  let answer = await llm.invoke(prompt);
+  let rawAnswer = await llm.invoke(prompt);
+
+  let parsed;
+  try {
+    parsed = JSON.parse(rawAnswer);
+  } catch (e) {
+    parsed = {
+      answer: "Information not found in the documents",
+      usedSegments: [],
+    };
+  }
+
+  let answer = parsed.answer || "Information not found in the documents";
+
 
   if (
-    !answer ||
-    answer.toLocaleLowerCase().includes("not defined") ||
-    answer.toLocaleLowerCase().includes("not found")
+    !parsed.answer ||
+    parsed.answer.toLocaleLowerCase().includes("not defined") ||
+    parsed.answer.toLocaleLowerCase().includes("not found")||
+    parsed.answer.toLocaleLowerCase().includes("not mentioned")
   )
     answer = "Information not found in the documents";
+  let usedSegmentIds = parsed.usedSegments || [];
+
+  const existingSegments = segments.map((s) => s.segmentId);
+  usedSegmentIds = usedSegmentIds
+    .map(String)
+    .filter((id) => existingSegments.includes(id));
+
+  if (!usedSegmentIds.length) {
+    usedSegmentIds = existingSegments;
+  }
 
   await prisma.question.update({
     where: { id: question.id },
     data: { answer },
   });
 
-  return { question, answer };
+  await prisma.questionSegment.deleteMany({
+    where: { questionId: question.id },
+  });
+
+  await prisma.questionSegment.createMany({
+    data: usedSegmentIds.map((id) => ({
+      questionId: question.id,
+      segmentId: id,
+    })),
+    skipDuplicates: true,
+  });
+
+  const sources = segments
+    .filter((s) => usedSegmentIds.includes(s.segmentId))
+    .map((s) => ({
+      documentId: s.documentId,
+      fileName: s.fileName,
+      segmentId: s.segmentId,
+      preview: s.content.slice(0, 200) + "...",
+    }));
+
+  return {
+    question,
+    answer,
+    sources,
+  };
 };
 
 export const getQuestions = async (userId) => {
   return await prisma.question.findMany({
     where: { userId },
     orderBy: { createdAt: "desc" },
-    include: { segments: { include: { segment: true } } },
+    include: {
+      segments: {
+        include: {
+          segment: {
+            include: {
+              document: true,
+            },
+          },
+        },
+      },
+    },
   });
 };

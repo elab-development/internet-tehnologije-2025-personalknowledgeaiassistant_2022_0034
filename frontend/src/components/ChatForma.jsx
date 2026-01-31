@@ -4,12 +4,13 @@ import Navbar from "./NavBar";
 
 export default function ChatForma() {
   const [messages, setMessages] = useState([
-    { sender: "bot", text: "Hello! How can I help you?" },
+    { sender: "bot", text: "Hello! How can I help you?", sources: [] },
   ]);
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState([]);
+  const [showSources, setShowSources] = useState({});
 
   const fetchUploadedFiles = async () => {
     try {
@@ -26,15 +27,17 @@ export default function ChatForma() {
           id: file.id,
           name: file.fileName,
           type: file.fileType,
-        })),
+        }))
       );
     } catch (err) {
       console.error("Failed to load uploaded files", err);
     }
   };
+
+  // 👇 FIX: ovo je tačno kako treba
   useEffect(() => {
     fetchUploadedFiles();
-  }, [uploadedFiles]);
+  }, []);
 
   // Upload vise fajlova (PDF, TXT, MD)
   const HandleFileUpload = async (e) => {
@@ -65,7 +68,7 @@ export default function ChatForma() {
               Authorization: `Bearer ${token}`,
               "Content-Type": "multipart/form-data",
             },
-          },
+          }
         );
 
         setUploadedFiles((prev) => [
@@ -82,7 +85,7 @@ export default function ChatForma() {
       if (error.response) {
         console.error(
           "File upload failed:",
-          error.response.data?.message || error.message,
+          error.response.data?.message || error.message
         );
       } else {
         console.error("File upload failed:", error.message);
@@ -99,7 +102,10 @@ export default function ChatForma() {
 
     const userMessage = message;
 
-    setMessages((prev) => [...prev, { sender: "user", text: userMessage }]);
+    setMessages((prev) => [
+      ...prev,
+      { sender: "user", text: userMessage, sources: [] },
+    ]);
 
     setMessage("");
     setIsLoading(true);
@@ -114,12 +120,23 @@ export default function ChatForma() {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        },
+        }
       );
+
+      const answerText = data.data.answer;
+      const sources = data.data.sources || [];
+
+      // Ako AI kaže da nema info u dokumentima
+      const hasNoInfo =
+        answerText?.toLowerCase().includes("information not found");
 
       setMessages((prev) => [
         ...prev,
-        { sender: "bot", text: data.data.answer },
+        {
+          sender: "bot",
+          text: answerText,
+          sources: hasNoInfo ? [] : sources,
+        },
       ]);
     } catch (error) {
       console.error(error);
@@ -128,6 +145,7 @@ export default function ChatForma() {
         {
           sender: "bot",
           text: "Error talking to AI",
+          sources: [],
         },
       ]);
     } finally {
@@ -149,6 +167,13 @@ export default function ChatForma() {
     } catch (err) {
       console.error("Failed to delete file", err);
     }
+  };
+
+  const toggleSources = (index) => {
+    setShowSources((prev) => ({
+      ...prev,
+      [index]: !prev[index],
+    }));
   };
 
   return (
@@ -238,15 +263,55 @@ export default function ChatForma() {
             {/* Poruke */}
             <div className="flex-1 overflow-y-auto space-y-3 bg-slate-700 rounded-lg p-4">
               {messages.map((msg, index) => (
-                <div
-                  key={index}
-                  className={`max-w-[75%] px-4 py-2 rounded-xl text-sm ${
-                    msg.sender === "user"
-                      ? "bg-indigo-500 text-white ml-auto"
-                      : "bg-slate-600 text-slate-100 mr-auto"
-                  }`}
-                >
-                  {msg.text}
+                <div key={index} className="space-y-2">
+                  <div
+                    className={`max-w-[75%] px-4 py-2 rounded-xl text-sm ${
+                      msg.sender === "user"
+                        ? "bg-indigo-500 text-white ml-auto"
+                        : "bg-slate-600 text-slate-100 mr-auto"
+                    }`}
+                  >
+                    {msg.text}
+                  </div>
+
+                  {/* Show Sources button - only for bot messages with sources */}
+                  {msg.sender === "bot" &&
+                    msg.sources &&
+                    msg.sources.length > 0 && (
+                      <div className="max-w-[75%] mr-auto">
+                        <button
+                          type="button"
+                          onClick={() => toggleSources(index)}
+                          className="text-xs text-indigo-400 hover:text-indigo-300 underline flex items-center gap-1"
+                        >
+                          {showSources[index]
+                            ? "Hide Sources"
+                            : "Show Sources"}
+                        </button>
+
+                        {/* Sources display */}
+                        {showSources[index] && (
+                          <div className="mt-2 bg-slate-800 rounded-lg p-3 space-y-2">
+                            <p className="text-xs font-semibold text-slate-300 mb-2">
+                              📚 Sources ({msg.sources.length})
+                            </p>
+                            {msg.sources.map((source, sourceIndex) => (
+                              <div
+                                key={sourceIndex}
+                                className="bg-slate-700 rounded p-2 text-xs"
+                              >
+                                <p className="text-indigo-300 font-medium mb-1">
+                                  📄 {source.fileName}
+                                </p>
+                                <p className="text-slate-400 italic">
+                                  {source.preview}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
                 </div>
               ))}
 

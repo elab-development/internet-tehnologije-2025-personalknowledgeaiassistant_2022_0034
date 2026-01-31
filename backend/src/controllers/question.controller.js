@@ -6,9 +6,17 @@ export const askQuestion = async (req, res) => {
     const { query } = req.body;
     if (!query) return fail(res, 'Query is required', 400);
 
-    const { question, answer } = await questionService.createQuestion(req.user.id, query);
+    const { question, answer, sources } =
+      await questionService.createQuestion(req.user.id, query);
 
-    success(res, { question, answer }, 'Question answered');
+    success(
+      res,
+      {
+        answer,
+        sources
+      },
+      'Question answered'
+    );
   } catch (err) {
     console.error(err);
     fail(res, err.message || 'Failed to process question', 500);
