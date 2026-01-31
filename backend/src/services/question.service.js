@@ -4,19 +4,23 @@ import { getEmbedding } from "../utils/embedding.js";
 import { normalize } from "../utils/embedding.js";
 
 const llm = new Ollama({
-  model: "llama3",
+  model: "qwen2.5:7b",
   baseUrl: "http://localhost:11434",
   system: `
-Ti si AI asistent za odgovaranje na pitanja na osnovu dokumenata.
-Odgovaraj isključivo koristeći dati kontekst.
-Ako odgovor ne postoji ili nije naveden u kontekstu, odgovori tacno recenicom:
-"Informacija nije pronadjena u dokumentima."
+You are an AI assistant that answers questions based on provided documents.
+Answer ONLY using the given context.
+If the answer does not exist or is not mentioned in the context, respond with exactly:
+"Information not found in documents."
 `,
   temperature: 0.1,
   top_p: 0.9,
+  numCtx: 4096,
+  numPredict: 512,
+  numGpu: 99,
+  numThread: -1,
 });
 
-const TOP_K = 10;
+const TOP_K = 5;
 
 export const createQuestion = async (userId, query) => {
   const question = await prisma.question.create({
@@ -38,19 +42,24 @@ export const createQuestion = async (userId, query) => {
   const context = segments.map((s) => s.content).join("\n\n");
 
   const prompt = `
-KONTEKST:
+CONTEXT:
 ${context}
 
-PITANJE:
+QUESTION:
 ${query}
 
-Odgovori jasno i precizno, koristeći samo informacije iz konteksta.
-Ako informacije ne postoje u kotekstu napisi samo: Inforamcija nije pronadjena u dokumentima.
+Answer clearly and precisely, using only information from the context.
+If the information is not present in the context, respond only with: Information not found in the documents.
 `;
 
   let answer = await llm.invoke(prompt);
 
-  if (!answer || answer.toLocaleLowerCase().includes("nije definisan") || answer.toLocaleLowerCase().includes("nije pronadjen")) answer = "Informacija nije pronađena u dokumentima";
+  if (
+    !answer ||
+    answer.toLocaleLowerCase().includes("not defined") ||
+    answer.toLocaleLowerCase().includes("not found")
+  )
+    answer = "Information not found in the documents";
 
   await prisma.question.update({
     where: { id: question.id },
