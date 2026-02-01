@@ -18,6 +18,10 @@ export const getLLM = (modelName = "qwen7") => {
         model: "llama3",
         baseUrl: "http://localhost:11434",
         temperature: 0,
+        top_p: 0.85,
+        numCtx: 4096,
+        numPredict: 256,
+        numThread: -1,
       });
 
     case "qwen1":
@@ -30,19 +34,17 @@ export const getLLM = (modelName = "qwen7") => {
         numPredict: 128,
         numThread: -1,
       });
-    case "mistral":
-      return new Ollama({
-        model: "mistral:7b",
-        baseUrl: "http://localhost:11434",
-        temperature: 0,
-      });
 
-    case "phi3":
+    case "gemma2":
       return new Ollama({
-        model: "phi3.5",
+        model: "gemma2:2b",
         baseUrl: "http://localhost:11434",
-        temperature: 0,
-        numCtx: 2048,
+        temperature: 0.1,
+        top_p: 0.95,
+        numCtx: 4096,
+        numPredict: 512,
+        numGpu: 99,
+        numThread: -1,
       });
 
     default:

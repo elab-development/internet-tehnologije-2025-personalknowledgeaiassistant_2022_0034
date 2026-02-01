@@ -1,9 +1,9 @@
 import prisma from "../config/prisma.js";
-import { Ollama } from "@langchain/community/llms/ollama";
 import { getEmbedding, normalize } from "../utils/embedding.js";
 import { getLLM } from "../config/llmFactory.js";
 
 const TOP_K = 5;
+const MODELS_WITH_SEGMENTS = ["llama", "qwen7"];
 
 export const createQuestion = async (userId, query, model) => {
   const question = await prisma.question.create({
@@ -37,8 +37,6 @@ ${context}
 QUESTION:
 ${query}
 
-
-
 Return valid JSON only:
 {
   "answer": "your answer here",
@@ -57,33 +55,57 @@ If the answer does not exist or is not mentioned in the context, respond with ex
 ${prompt}
 `);
 
-  let parsed;
-  try {
-    parsed = JSON.parse(rawAnswer);
-  } catch (e) {
-    parsed = {
-      answer: "Information not found in the documents",
-      usedSegments: [],
-    };
+  console.log("RAW LLM ANSWER:\n", rawAnswer);
+
+  const supportsSegments = MODELS_WITH_SEGMENTS.some((m) =>
+    model.toLowerCase().includes(m),
+  );
+
+  let parsed = null;
+
+  const cleaned = rawAnswer
+    .replace(/```json/gi, "")
+    .replace(/```/g, "")
+    .trim();
+
+  const match = cleaned.match(/\{[\s\S]*\}/);
+
+  if (match) {
+    try {
+      parsed = JSON.parse(match[0]);
+    } catch {
+      parsed = null;
+    }
   }
 
-  let answer = parsed.answer || "Information not found in the documents";
+  let answer =
+    parsed && typeof parsed.answer === "string" && parsed.answer.trim().length
+      ? parsed.answer.trim()
+      : "Information not found in the documents";
 
   if (
-    !parsed.answer ||
+    !parsed ||
     parsed.answer.toLocaleLowerCase().includes("not defined") ||
     parsed.answer.toLocaleLowerCase().includes("not found") ||
     parsed.answer.toLocaleLowerCase().includes("not mentioned")
-  )
+  ) {
     answer = "Information not found in the documents";
-  let usedSegmentIds = parsed.usedSegments || [];
+  }
 
   const existingSegments = segments.map((s) => s.segmentId);
-  usedSegmentIds = usedSegmentIds
-    .map(String)
-    .filter((id) => existingSegments.includes(id));
 
-  if (!usedSegmentIds.length) {
+  let usedSegmentIds =
+    supportsSegments && parsed && Array.isArray(parsed.usedSegments)
+      ? parsed.usedSegments
+          .map(String)
+          .filter((id) => existingSegments.includes(id))
+      : [];
+
+  if (
+    supportsSegments &&
+    answer !== "Information not found in the documents" &&
+    !usedSegmentIds.length
+  ) {
     usedSegmentIds = existingSegments;
   }
 
@@ -92,26 +114,31 @@ ${prompt}
     data: { answer },
   });
 
-  await prisma.questionSegment.deleteMany({
-    where: { questionId: question.id },
-  });
+  if (supportsSegments && usedSegmentIds.length) {
+    await prisma.questionSegment.deleteMany({
+      where: { questionId: question.id },
+    });
 
-  await prisma.questionSegment.createMany({
-    data: usedSegmentIds.map((id) => ({
-      questionId: question.id,
-      segmentId: id,
-    })),
-    skipDuplicates: true,
-  });
+    await prisma.questionSegment.createMany({
+      data: usedSegmentIds.map((id) => ({
+        questionId: question.id,
+        segmentId: id,
+      })),
+      skipDuplicates: true,
+    });
+  }
 
-  const sources = segments
-    .filter((s) => usedSegmentIds.includes(s.segmentId))
-    .map((s) => ({
-      documentId: s.documentId,
-      fileName: s.fileName,
-      segmentId: s.segmentId,
-      preview: s.content.slice(0, 200) + "...",
-    }));
+  const sources =
+    supportsSegments && answer !== "Information not found in the documents"
+      ? segments
+          .filter((s) => usedSegmentIds.includes(s.segmentId))
+          .map((s) => ({
+            documentId: s.documentId,
+            fileName: s.fileName,
+            segmentId: s.segmentId,
+            preview: s.content.slice(0, 200) + "...",
+          }))
+      : [];
 
   return {
     question,
@@ -121,7 +148,7 @@ ${prompt}
 };
 
 export const getQuestions = async (userId) => {
-  return await prisma.question.findMany({
+  return prisma.question.findMany({
     where: { userId },
     orderBy: { createdAt: "desc" },
     include: {

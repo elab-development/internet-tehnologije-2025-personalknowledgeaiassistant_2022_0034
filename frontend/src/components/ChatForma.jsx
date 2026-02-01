@@ -357,8 +357,7 @@ export default function ChatForma() {
                   <option value="qwen7">Qwen 2.5:7b</option>
                   <option value="llama">LLaMA 3</option>
                   <option value="qwen1">Qwen 2.5:1.5b</option>
-                  <option value="phi3">Phi3</option>
-                  <option value="mistral">Mistral</option>
+                  <option value="gemma2">Gemma2</option>
                 </select>
 
                 {/* Send */}
