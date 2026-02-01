@@ -11,7 +11,177 @@ export default function ChatForma() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [showSources, setShowSources] = useState({});
-  const [selectedModel, setSelectedModel] = useState("qwen");
+  const [selectedModel, setSelectedModel] = useState("qwen7");
+
+  const [chats, setChats] = useState([]);
+  const [currentChatId, setCurrentChatId] = useState(null);
+  const [isInitializing, setIsInitializing] = useState(true);
+
+  // New Chat
+  const handleNewChat = async () => {
+    const title = prompt("Enter a title for your new chat:", "New Chat");
+
+    if (title === null) {
+      return null;
+    }
+
+    try {
+      const token = localStorage.getItem("token");
+      const { data } = await axios.post(
+        "http://localhost:3000/api/chat",
+        { title: title.trim() || "New Chat" },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      setChats((prev) => [data, ...prev]);
+      setCurrentChatId(data.id);
+      setMessages([
+        { sender: "bot", text: "Hello! How can I help you?", sources: [] },
+      ]);
+      return data.id;
+    } catch (err) {
+      console.error("Failed to create new chat:", err);
+      alert("Failed to create chat. Please try again.");
+      return null;
+    }
+  };
+
+  // Delete Chat
+  const handleDeleteChat = async (chatId, e) => {
+    e.stopPropagation();
+
+    if (!confirm("Are you sure you want to delete this chat?")) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("token");
+      await axios.delete(`http://localhost:3000/api/chat/${chatId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      setChats((prev) => prev.filter((chat) => chat.id !== chatId));
+
+      if (currentChatId === chatId) {
+        const remainingChats = chats.filter((chat) => chat.id !== chatId);
+        if (remainingChats.length > 0) {
+          setCurrentChatId(remainingChats[0].id);
+        } else {
+          await createInitialChat();
+        }
+      }
+    } catch (err) {
+      console.error("Failed to delete chat:", err);
+      alert("Failed to delete chat. Please try again.");
+    }
+  };
+
+  const fetchChats = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const { data } = await axios.get("http://localhost:3000/api/chat", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const chatsArray = Array.isArray(data) ? data : data.chats || [];
+
+      setChats(chatsArray);
+
+      if (chatsArray.length > 0) {
+        setCurrentChatId(chatsArray[0].id);
+        return chatsArray[0].id;
+      } else {
+        const newChatId = await createInitialChat();
+        return newChatId;
+      }
+    } catch (err) {
+      console.error("Failed to fetch chats:", err);
+      setChats([]);
+      const newChatId = await createInitialChat();
+      return newChatId;
+    }
+  };
+
+  // Create initial chat without prompting user (only on first load)
+  const createInitialChat = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const { data } = await axios.post(
+        "http://localhost:3000/api/chat",
+        { title: "New Chat" },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      setChats([data]);
+      setCurrentChatId(data.id);
+      setMessages([
+        { sender: "bot", text: "Hello! How can I help you?", sources: [] },
+      ]);
+      return data.id;
+    } catch (err) {
+      console.error("Failed to create initial chat:", err);
+      return null;
+    }
+  };
+
+  // Load chat history for a specific chat
+  const loadChatHistory = async (chatId) => {
+    if (!chatId) return;
+
+    try {
+      const token = localStorage.getItem("token");
+      const { data } = await axios.get(
+        `http://localhost:3000/api/chat/${chatId}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      console.log("Chat data:", data);
+      
+      // Check if data has questions array
+      if (data && data.questions && Array.isArray(data.questions)) {
+        const formattedMessages = [];
+        
+        // Add welcome message at the start
+        formattedMessages.push({
+          sender: "bot",
+          text: "Hello! How can I help you?",
+          sources: [],
+        });
+        
+        // Add each question and answer pair
+        data.questions.forEach((q) => {
+          // Add user question
+          formattedMessages.push({
+            sender: "user",
+            text: q.query || "",
+            sources: [],
+          });
+          
+          // Add bot answer
+          formattedMessages.push({
+            sender: "bot",
+            text: q.answer || "",
+            sources: q.sources || [],
+          });
+        });
+
+        setMessages(formattedMessages);
+      } else {
+        setMessages([
+          { sender: "bot", text: "Hello! How can I help you?", sources: [] },
+        ]);
+      }
+    } catch (err) {
+      console.error("Failed to load chat history:", err);
+      setMessages([
+        { sender: "bot", text: "Hello! How can I help you?", sources: [] },
+      ]);
+    }
+  };
 
   const fetchUploadedFiles = async () => {
     try {
@@ -35,12 +205,24 @@ export default function ChatForma() {
     }
   };
 
-  // 👇 FIX: ovo je tačno kako treba
+  // Initial load - only runs once on mount
   useEffect(() => {
-    fetchUploadedFiles();
-  }, []);
+    const loadData = async () => {
+      setIsInitializing(true);
+      await fetchUploadedFiles();
+      await fetchChats();
+      setIsInitializing(false);
+    };
+    loadData();
+  }, []); 
 
-  // Upload vise fajlova (PDF, TXT, MD)
+  // Load chat history whenever currentChatId changes
+  useEffect(() => {
+    if (currentChatId && !isInitializing) {
+      loadChatHistory(currentChatId);
+    }
+  }, [currentChatId]);
+
   const HandleFileUpload = async (e) => {
     const files = Array.from(e.target.files);
     if (!files.length) return;
@@ -93,21 +275,30 @@ export default function ChatForma() {
       }
     } finally {
       setIsUploading(false);
-      e.target.value = ""; // Reset input fajlova
+      e.target.value = "";
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!message.trim()) return;
+    if (!currentChatId) {
+      const newChatId = await createInitialChat();
+      if (!newChatId) {
+        alert("Failed to create chat. Please try again.");
+        return;
+      }
+      await sendMessage(message, newChatId);
+    } else {
+      await sendMessage(message, currentChatId);
+    }
+  };
 
-    const userMessage = message;
-
+  const sendMessage = async (userMessage, chatId) => {
     setMessages((prev) => [
       ...prev,
       { sender: "user", text: userMessage, sources: [] },
     ]);
-
     setMessage("");
     setIsLoading(true);
 
@@ -116,37 +307,31 @@ export default function ChatForma() {
 
       const { data } = await axios.post(
         "http://localhost:3000/api/questions",
-        { query: userMessage, model: selectedModel },
         {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          query: userMessage,
+          chatId: chatId,
+          model: selectedModel,
         },
+        { headers: { Authorization: `Bearer ${token}` } },
       );
 
-      const answerText = data.data.answer;
-      const sources = data.data.sources || [];
-
-      // Ako AI kaže da nema info u dokumentima
-      const hasNoInfo = answerText
-        ?.toLowerCase()
-        .includes("information not found");
+      const botAnswer =
+        data?.data?.answer || "Information not found in the documents";
+      const botSources = data?.data?.sources || [];
 
       setMessages((prev) => [
         ...prev,
-        {
-          sender: "bot",
-          text: answerText,
-          sources: hasNoInfo ? [] : sources,
-        },
+        { sender: "bot", text: botAnswer, sources: botSources },
       ]);
-    } catch (error) {
-      console.error(error);
+    } catch (err) {
+      console.error("Failed to send question:", err);
       setMessages((prev) => [
         ...prev,
         {
           sender: "bot",
-          text: "Error talking to AI",
+          text:
+            err.response?.data?.message ||
+            "Error connecting to the AI service.",
           sources: [],
         },
       ]);
@@ -178,35 +363,80 @@ export default function ChatForma() {
     }));
   };
 
+  const handleChatSelect = (chatId) => {
+    setCurrentChatId(chatId);
+  };
+
+  if (isInitializing) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <div className="text-slate-200 text-lg">Loading...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-900 flex flex-col">
-      {/* Navbar skroz gore */}
+      {/* Navbar */}
       <Navbar />
 
-      {/* Glavni sadržaj */}
+      {/* Main content */}
       <div className="flex flex-1 gap-6 p-6 max-w-7xl mx-auto w-full">
         {/* Sidebar */}
         <aside className="w-[20%] min-w-[220px] bg-slate-800 rounded-xl p-4 flex flex-col gap-6 shadow-lg">
-          {/* Chat istorija */}
+          {/* Chat history */}
           <div>
             <h3 className="text-slate-200 font-semibold mb-2 text-sm">
               💬 Chat History
             </h3>
             <ul className="space-y-2 text-sm max-h-48 overflow-y-auto">
-              <li className="bg-slate-700 text-slate-200 px-3 py-2 rounded cursor-pointer hover:bg-slate-600">
-                New chat
+              <li
+                onClick={handleNewChat}
+                className="bg-indigo-600 text-white px-3 py-2 rounded cursor-pointer hover:bg-indigo-700 font-medium text-center"
+              >
+                + New Chat
               </li>
-              <li className="bg-slate-700 text-slate-200 px-3 py-2 rounded opacity-70">
-                Previous chat
-              </li>
+              {chats.map((chat) => (
+                <li
+                  key={chat.id}
+                  onClick={() => handleChatSelect(chat.id)}
+                  className={`bg-slate-700 text-slate-200 px-3 py-2 rounded cursor-pointer hover:bg-slate-600 flex items-center justify-between group ${
+                    chat.id === currentChatId
+                      ? "ring-2 ring-indigo-500 bg-slate-600"
+                      : "opacity-70"
+                  }`}
+                >
+                  <span className="truncate flex-1 text-xs">
+                    {chat.title || "Untitled Chat"}
+                  </span>
+                  <button
+                    onClick={(e) => handleDeleteChat(chat.id, e)}
+                    className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity w-5 h-5 bg-red-500 rounded flex items-center justify-center hover:bg-red-600 flex-shrink-0"
+                    title="Delete chat"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="white"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="w-3 h-3"
+                    >
+                      <polyline points="3 6 5 6 21 6"></polyline>
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    </svg>
+                  </button>
+                </li>
+              ))}
             </ul>
           </div>
 
-          {/* Uploadovani fajlovi */}
+          {/* Uploaded files */}
           <div>
             <h3 className="text-slate-200 font-semibold mb-2 text-sm">
-              {" "}
-              📁 Files{" "}
+              📁 Files
             </h3>
             <ul className="space-y-2 text-sm max-h-48 overflow-y-auto">
               {uploadedFiles.map((file) => (
@@ -221,14 +451,7 @@ export default function ChatForma() {
 
                     <button
                       onClick={() => handleDeleteFile(file.id)}
-                      className="
-    w-5 h-5
-    bg-red-500
-    rounded
-    flex items-center justify-center
-    hover:bg-red-600
-    transition
-  "
+                      className="w-5 h-5 bg-red-500 rounded flex items-center justify-center hover:bg-red-600 transition"
                       title="Delete file"
                     >
                       <svg
@@ -262,7 +485,7 @@ export default function ChatForma() {
             onSubmit={handleSubmit}
             className="flex flex-col flex-1 min-h-0"
           >
-            {/* Poruke */}
+            {/* Messages */}
             <div className="flex-1 overflow-y-auto space-y-3 bg-slate-700 rounded-lg p-4">
               {messages.map((msg, index) => (
                 <div key={index} className="space-y-2">
@@ -363,7 +586,7 @@ export default function ChatForma() {
                 {/* Send */}
                 <button
                   type="submit"
-                  disabled={isUploading}
+                  disabled={isUploading || isLoading}
                   className="flex-1 bg-indigo-500 text-white font-semibold py-2 rounded-lg hover:bg-indigo-600 disabled:opacity-50"
                 >
                   Send

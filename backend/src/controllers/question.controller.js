@@ -3,13 +3,15 @@ import { success, fail } from "../utils/response.js";
 
 export const askQuestion = async (req, res) => {
   try {
-    const { query, model } = req.body;
+    const { query, model, chatId } = req.body;
     if (!query) return fail(res, "Query is required", 400);
+    if (!chatId) return fail(res, "Chat ID is required", 400);
 
     const { question, answer, sources } = await questionService.createQuestion(
       req.user.id,
       query,
       model,
+      chatId
     );
 
     success(
