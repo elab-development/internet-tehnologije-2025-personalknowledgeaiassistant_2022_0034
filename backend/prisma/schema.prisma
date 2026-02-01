@@ -24,6 +24,17 @@ model User {
 
   documents Document[]
   questions Question[]
+  chats     Chat[]
+}
+
+
+model Chat {
+  id        String     @id @default(uuid())
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questions Question[]
+  title     String?    
+  createdAt DateTime   @default(now())
 }
 
 model Document {
@@ -64,11 +75,15 @@ model Question {
   userId      String
   user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  chatId      String
+  chat        Chat             @relation(fields: [chatId], references: [id], onDelete: Cascade)
+
   segments    QuestionSegment[]
 
   createdAt   DateTime   @default(now())
 
   @@index([userId])
+  @@index([chatId])
 }
 
 model QuestionSegment {

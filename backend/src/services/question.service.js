@@ -5,10 +5,28 @@ import { getLLM } from "../config/llmFactory.js";
 const TOP_K = 5;
 const MODELS_WITH_SEGMENTS = ["llama", "qwen7"];
 
-export const createQuestion = async (userId, query, model) => {
-  const question = await prisma.question.create({
-    data: { query, answer: "", userId },
+export const createQuestion = async (userId, query, model, chatId) => {
+  // Validate that chatId exists
+  if (!chatId) {
+    throw new Error("chatId is required");
+  }
+
+  // Verify the chat exists and belongs to the user
+  const chat = await prisma.chat.findFirst({
+    where: {
+      id: chatId,
+      userId: userId,
+    },
   });
+
+  if (!chat) {
+    throw new Error("Chat not found or access denied");
+  }
+
+  const question = await prisma.question.create({
+    data: { query, answer: "", userId, chatId },
+  });
+
   const llm = getLLM(model);
   const raw = await getEmbedding(query);
   const questionEmbedding = normalize(raw);
@@ -85,9 +103,9 @@ ${prompt}
 
   if (
     !parsed ||
-    parsed.answer.toLocaleLowerCase().includes("not defined") ||
-    parsed.answer.toLocaleLowerCase().includes("not found") ||
-    parsed.answer.toLocaleLowerCase().includes("not mentioned")
+    parsed.answer.toLowerCase().includes("not defined") ||
+    parsed.answer.toLowerCase().includes("not found") ||
+    parsed.answer.toLowerCase().includes("not mentioned")
   ) {
     answer = "Information not found in the documents";
   }
