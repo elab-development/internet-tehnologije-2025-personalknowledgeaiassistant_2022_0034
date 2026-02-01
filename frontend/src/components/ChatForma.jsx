@@ -11,6 +11,7 @@ export default function ChatForma() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [showSources, setShowSources] = useState({});
+  const [selectedModel, setSelectedModel] = useState("qwen");
 
   const fetchUploadedFiles = async () => {
     try {
@@ -27,7 +28,7 @@ export default function ChatForma() {
           id: file.id,
           name: file.fileName,
           type: file.fileType,
-        }))
+        })),
       );
     } catch (err) {
       console.error("Failed to load uploaded files", err);
@@ -68,7 +69,7 @@ export default function ChatForma() {
               Authorization: `Bearer ${token}`,
               "Content-Type": "multipart/form-data",
             },
-          }
+          },
         );
 
         setUploadedFiles((prev) => [
@@ -85,7 +86,7 @@ export default function ChatForma() {
       if (error.response) {
         console.error(
           "File upload failed:",
-          error.response.data?.message || error.message
+          error.response.data?.message || error.message,
         );
       } else {
         console.error("File upload failed:", error.message);
@@ -115,20 +116,21 @@ export default function ChatForma() {
 
       const { data } = await axios.post(
         "http://localhost:3000/api/questions",
-        { query: userMessage },
+        { query: userMessage, model: selectedModel },
         {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
 
       const answerText = data.data.answer;
       const sources = data.data.sources || [];
 
       // Ako AI kaže da nema info u dokumentima
-      const hasNoInfo =
-        answerText?.toLowerCase().includes("information not found");
+      const hasNoInfo = answerText
+        ?.toLowerCase()
+        .includes("information not found");
 
       setMessages((prev) => [
         ...prev,
@@ -284,9 +286,7 @@ export default function ChatForma() {
                           onClick={() => toggleSources(index)}
                           className="text-xs text-indigo-400 hover:text-indigo-300 underline flex items-center gap-1"
                         >
-                          {showSources[index]
-                            ? "Hide Sources"
-                            : "Show Sources"}
+                          {showSources[index] ? "Hide Sources" : "Show Sources"}
                         </button>
 
                         {/* Sources display */}
@@ -349,6 +349,16 @@ export default function ChatForma() {
                     className="hidden"
                   />
                 </label>
+                <select
+                  value={selectedModel}
+                  onChange={(e) => setSelectedModel(e.target.value)}
+                  className="bg-slate-900 text-slate-100 px-3 py-2 rounded-lg text-sm outline-none"
+                >
+                  <option value="qwen7">Qwen 2.5:7b</option>
+                  <option value="llama">LLaMA 3</option>
+                  <option value="qwen1">Qwen 2.5:1.5b</option>
+                  <option value="gemma2">Gemma2</option>
+                </select>
 
                 {/* Send */}
                 <button
