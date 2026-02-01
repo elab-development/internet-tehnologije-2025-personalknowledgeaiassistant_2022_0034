@@ -1,6 +1,0 @@
-Veštačka inteligencija (AI) predstavlja oblast računarstva koja se bavi razvojem sistema sposobnih da obavljaju zadatke koji inače zahtevaju ljudsku inteligenciju.
-U te zadatke spadaju prepoznavanje obrazaca, obrada prirodnog jezika, donošenje odluka i učenje iz podataka.
-
-Jedna od važnih oblasti AI je mašinsko učenje. Mašinsko učenje omogućava sistemima da automatski unapređuju svoje performanse na osnovu iskustva, bez eksplicitnog programiranja.
-
-Duboko učenje je podgrana mašinskog učenja koja koristi neuronske mreže sa više slojeva za obradu kompleksnih podataka, kao što su slike, zvuk i tekst.

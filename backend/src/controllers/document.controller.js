@@ -21,6 +21,16 @@ export const getDocuments = async (req, res, next) => {
     next(err);
   }
 };
+export const getDocumentsByUser = async (req, res, next) => {
+  try {
+    const userId = req.params.id;
+    const docs = await documentService.getDocuments(userId);
+    
+    success(res, docs);
+  } catch (err) {
+    next(err);
+  }
+};
 
 export const getDocument = async (req, res, next) => {
   try {

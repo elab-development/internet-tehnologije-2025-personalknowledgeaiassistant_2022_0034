@@ -4,12 +4,184 @@ import Navbar from "./NavBar";
 
 export default function ChatForma() {
   const [messages, setMessages] = useState([
-    { sender: "bot", text: "Hello! How can I help you?" },
+    { sender: "bot", text: "Hello! How can I help you?", sources: [] },
   ]);
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState([]);
+  const [showSources, setShowSources] = useState({});
+  const [selectedModel, setSelectedModel] = useState("qwen7");
+
+  const [chats, setChats] = useState([]);
+  const [currentChatId, setCurrentChatId] = useState(null);
+  const [isInitializing, setIsInitializing] = useState(true);
+
+  // New Chat
+  const handleNewChat = async () => {
+    const title = prompt("Enter a title for your new chat:", "New Chat");
+
+    if (title === null) {
+      return null;
+    }
+
+    try {
+      const token = localStorage.getItem("token");
+      const { data } = await axios.post(
+        "http://localhost:3000/api/chat",
+        { title: title.trim() || "New Chat" },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      setChats((prev) => [data, ...prev]);
+      setCurrentChatId(data.id);
+      setMessages([
+        { sender: "bot", text: "Hello! How can I help you?", sources: [] },
+      ]);
+      return data.id;
+    } catch (err) {
+      console.error("Failed to create new chat:", err);
+      alert("Failed to create chat. Please try again.");
+      return null;
+    }
+  };
+
+  // Delete Chat
+  const handleDeleteChat = async (chatId, e) => {
+    e.stopPropagation();
+
+    if (!confirm("Are you sure you want to delete this chat?")) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("token");
+      await axios.delete(`http://localhost:3000/api/chat/${chatId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      setChats((prev) => prev.filter((chat) => chat.id !== chatId));
+
+      if (currentChatId === chatId) {
+        const remainingChats = chats.filter((chat) => chat.id !== chatId);
+        if (remainingChats.length > 0) {
+          setCurrentChatId(remainingChats[0].id);
+        } else {
+          await createInitialChat();
+        }
+      }
+    } catch (err) {
+      console.error("Failed to delete chat:", err);
+      alert("Failed to delete chat. Please try again.");
+    }
+  };
+
+  const fetchChats = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const { data } = await axios.get("http://localhost:3000/api/chat", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const chatsArray = Array.isArray(data) ? data : data.chats || [];
+
+      setChats(chatsArray);
+
+      if (chatsArray.length > 0) {
+        setCurrentChatId(chatsArray[0].id);
+        return chatsArray[0].id;
+      } else {
+        const newChatId = await createInitialChat();
+        return newChatId;
+      }
+    } catch (err) {
+      console.error("Failed to fetch chats:", err);
+      setChats([]);
+      const newChatId = await createInitialChat();
+      return newChatId;
+    }
+  };
+
+  // Create initial chat without prompting user (only on first load)
+  const createInitialChat = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const { data } = await axios.post(
+        "http://localhost:3000/api/chat",
+        { title: "New Chat" },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      setChats([data]);
+      setCurrentChatId(data.id);
+      setMessages([
+        { sender: "bot", text: "Hello! How can I help you?", sources: [] },
+      ]);
+      return data.id;
+    } catch (err) {
+      console.error("Failed to create initial chat:", err);
+      return null;
+    }
+  };
+
+  // Load chat history for a specific chat
+  const loadChatHistory = async (chatId) => {
+    if (!chatId) return;
+
+    try {
+      const token = localStorage.getItem("token");
+      const { data } = await axios.get(
+        `http://localhost:3000/api/chat/${chatId}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      console.log("Chat data:", data);
+      
+      // Check if data has questions array
+      if (data && data.questions && Array.isArray(data.questions)) {
+        const formattedMessages = [];
+        
+        // Add welcome message at the start
+        formattedMessages.push({
+          sender: "bot",
+          text: "Hello! How can I help you?",
+          sources: [],
+        });
+        
+        // Add each question and answer pair
+        data.questions.forEach((q) => {
+          // Add user question
+          formattedMessages.push({
+            sender: "user",
+            text: q.query || "",
+            sources: [],
+          });
+          
+          // Add bot answer
+          formattedMessages.push({
+            sender: "bot",
+            text: q.answer || "",
+            sources: q.sources || [],
+          });
+        });
+
+        setMessages(formattedMessages);
+      } else {
+        setMessages([
+          { sender: "bot", text: "Hello! How can I help you?", sources: [] },
+        ]);
+      }
+    } catch (err) {
+      console.error("Failed to load chat history:", err);
+      setMessages([
+        { sender: "bot", text: "Hello! How can I help you?", sources: [] },
+      ]);
+    }
+  };
 
   const fetchUploadedFiles = async () => {
     try {
@@ -32,11 +204,25 @@ export default function ChatForma() {
       console.error("Failed to load uploaded files", err);
     }
   };
-  useEffect(() => {
-    fetchUploadedFiles();
-  }, [uploadedFiles]);
 
-  // Upload vise fajlova (PDF, TXT, MD)
+  // Initial load - only runs once on mount
+  useEffect(() => {
+    const loadData = async () => {
+      setIsInitializing(true);
+      await fetchUploadedFiles();
+      await fetchChats();
+      setIsInitializing(false);
+    };
+    loadData();
+  }, []); 
+
+  // Load chat history whenever currentChatId changes
+  useEffect(() => {
+    if (currentChatId && !isInitializing) {
+      loadChatHistory(currentChatId);
+    }
+  }, [currentChatId]);
+
   const HandleFileUpload = async (e) => {
     const files = Array.from(e.target.files);
     if (!files.length) return;
@@ -71,6 +257,7 @@ export default function ChatForma() {
         setUploadedFiles((prev) => [
           ...prev,
           {
+            id: data.id,
             name: file.name,
             size: (file.size / 1024).toFixed(1) + " KB",
             type: fileExtension,
@@ -88,18 +275,30 @@ export default function ChatForma() {
       }
     } finally {
       setIsUploading(false);
-      e.target.value = ""; // Reset input fajlova
+      e.target.value = "";
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!message.trim()) return;
+    if (!currentChatId) {
+      const newChatId = await createInitialChat();
+      if (!newChatId) {
+        alert("Failed to create chat. Please try again.");
+        return;
+      }
+      await sendMessage(message, newChatId);
+    } else {
+      await sendMessage(message, currentChatId);
+    }
+  };
 
-    const userMessage = message;
-
-    setMessages((prev) => [...prev, { sender: "user", text: userMessage }]);
-
+  const sendMessage = async (userMessage, chatId) => {
+    setMessages((prev) => [
+      ...prev,
+      { sender: "user", text: userMessage, sources: [] },
+    ]);
     setMessage("");
     setIsLoading(true);
 
@@ -108,25 +307,32 @@ export default function ChatForma() {
 
       const { data } = await axios.post(
         "http://localhost:3000/api/questions",
-        { query: userMessage },
         {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          query: userMessage,
+          chatId: chatId,
+          model: selectedModel,
         },
+        { headers: { Authorization: `Bearer ${token}` } },
       );
+
+      const botAnswer =
+        data?.data?.answer || "Information not found in the documents";
+      const botSources = data?.data?.sources || [];
 
       setMessages((prev) => [
         ...prev,
-        { sender: "bot", text: data.data.answer },
+        { sender: "bot", text: botAnswer, sources: botSources },
       ]);
-    } catch (error) {
-      console.error(error);
+    } catch (err) {
+      console.error("Failed to send question:", err);
       setMessages((prev) => [
         ...prev,
         {
           sender: "bot",
-          text: "Error talking to AI",
+          text:
+            err.response?.data?.message ||
+            "Error connecting to the AI service.",
+          sources: [],
         },
       ]);
     } finally {
@@ -134,97 +340,262 @@ export default function ChatForma() {
     }
   };
 
+  const handleDeleteFile = async (fileId) => {
+    try {
+      const token = localStorage.getItem("token");
+
+      await axios.delete(`http://localhost:3000/api/document/${fileId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      setUploadedFiles((prev) => prev.filter((file) => file.id !== fileId));
+    } catch (err) {
+      console.error("Failed to delete file", err);
+    }
+  };
+
+  const toggleSources = (index) => {
+    setShowSources((prev) => ({
+      ...prev,
+      [index]: !prev[index],
+    }));
+  };
+
+  const handleChatSelect = (chatId) => {
+    setCurrentChatId(chatId);
+  };
+
+  if (isInitializing) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <div className="text-slate-200 text-lg">Loading...</div>
+      </div>
+    );
+  }
+
   return (
-    <div className="bg-yellow-700 p-6 rounded-lg shadow-lg w-2/3 max-w-full h-3/4 flex flex-col">
+    <div className="min-h-screen bg-slate-900 flex flex-col">
+      {/* Navbar */}
       <Navbar />
 
-      <h2 className="text-white text-xl text-center mb-4">AI Chat</h2>
-
-      <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
-        {/* Chat poruke */}
-        <div className="bg-yellow-600 rounded p-3 flex-1 min-h-0 overflow-y-auto space-y-2">
-          {messages.map((msg, index) => (
-            <div
-              key={index}
-              className={`max-w-[80%] p-2 rounded-lg text-sm break-words ${
-                msg.sender === "user"
-                  ? "bg-white text-yellow-700 ml-auto"
-                  : "bg-yellow-800 text-white mr-auto"
-              }`}
-            >
-              {msg.text}
-            </div>
-          ))}
-
-          {isLoading && (
-            <div className="text-white text-sm italic">AI is typing...</div>
-          )}
-        </div>
-        {/* Prikaz uploadovanih fajlova */}
-        {uploadedFiles.length > 0 && (
-          <div className="bg-yellow-500 rounded p-2 mt-3">
-            <p className="text-white text-sm font-semibold mb-1">
-              Uploaded files:
-            </p>
-
-            <ul className="space-y-1 max-h-24 overflow-y-auto">
-              {uploadedFiles.map((file, index) => (
+      {/* Main content */}
+      <div className="flex flex-1 gap-6 p-6 max-w-7xl mx-auto w-full">
+        {/* Sidebar */}
+        <aside className="w-[20%] min-w-[220px] bg-slate-800 rounded-xl p-4 flex flex-col gap-6 shadow-lg">
+          {/* Chat history */}
+          <div>
+            <h3 className="text-slate-200 font-semibold mb-2 text-sm">
+              💬 Chat History
+            </h3>
+            <ul className="space-y-2 text-sm max-h-48 overflow-y-auto">
+              <li
+                onClick={handleNewChat}
+                className="bg-indigo-600 text-white px-3 py-2 rounded cursor-pointer hover:bg-indigo-700 font-medium text-center"
+              >
+                + New Chat
+              </li>
+              {chats.map((chat) => (
                 <li
-                  key={index}
-                  className="text-white text-xs flex justify-between items-center bg-yellow-600 px-2 py-1 rounded"
+                  key={chat.id}
+                  onClick={() => handleChatSelect(chat.id)}
+                  className={`bg-slate-700 text-slate-200 px-3 py-2 rounded cursor-pointer hover:bg-slate-600 flex items-center justify-between group ${
+                    chat.id === currentChatId
+                      ? "ring-2 ring-indigo-500 bg-slate-600"
+                      : "opacity-70"
+                  }`}
                 >
-                  <span className="truncate max-w-[70%]">📄 {file.name}</span>
-                  <span className="opacity-80 ml-2 whitespace-nowrap">
-                    {file.size}
+                  <span className="truncate flex-1 text-xs">
+                    {chat.title || "Untitled Chat"}
                   </span>
+                  <button
+                    onClick={(e) => handleDeleteChat(chat.id, e)}
+                    className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity w-5 h-5 bg-red-500 rounded flex items-center justify-center hover:bg-red-600 flex-shrink-0"
+                    title="Delete chat"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="white"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="w-3 h-3"
+                    >
+                      <polyline points="3 6 5 6 21 6"></polyline>
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    </svg>
+                  </button>
                 </li>
               ))}
             </ul>
           </div>
-        )}
 
-        {/* Input i dugme */}
-        <div className="mt-4 space-y-3">
-          <div className="flex flex-col">
-            <label className="text-white mb-1">Your message</label>
-            <input
-              type="text"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="Type a message..."
-              className="p-2 rounded outline-none"
-            />
+          {/* Uploaded files */}
+          <div>
+            <h3 className="text-slate-200 font-semibold mb-2 text-sm">
+              📁 Files
+            </h3>
+            <ul className="space-y-2 text-sm max-h-48 overflow-y-auto">
+              {uploadedFiles.map((file) => (
+                <li
+                  key={file.id}
+                  className="bg-slate-700 text-slate-200 text-xs px-3 py-1.5 rounded flex justify-between items-center"
+                >
+                  <span className="truncate max-w-[70%]">{file.name}</span>
+
+                  <div className="flex items-center gap-1">
+                    <span className="opacity-60 text-[10px]">{file.size}</span>
+
+                    <button
+                      onClick={() => handleDeleteFile(file.id)}
+                      className="w-5 h-5 bg-red-500 rounded flex items-center justify-center hover:bg-red-600 transition"
+                      title="Delete file"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="white"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="w-3.5 h-3.5"
+                      >
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                      </svg>
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
           </div>
+        </aside>
 
-          <div className="flex gap-2">
-            {/* Upload fajlova */}
-            <label
-              className={`bg-white text-yellow-700 px-3 py-2 rounded cursor-pointer hover:bg-gray-100 flex items-center justify-center ${
-                isUploading ? "opacity-50 pointer-events-none" : ""
-              }`}
-              title="Upload PDF, TXT, MD files"
-            >
-              {isUploading ? "⏳" : "📎"}
+        {/* Chat */}
+        <main className="flex-1 bg-slate-800 rounded-xl shadow-lg p-6 flex flex-col">
+          <h2 className="text-slate-100 text-lg font-semibold text-center mb-4">
+            AI Chat
+          </h2>
+
+          <form
+            onSubmit={handleSubmit}
+            className="flex flex-col flex-1 min-h-0"
+          >
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto space-y-3 bg-slate-700 rounded-lg p-4">
+              {messages.map((msg, index) => (
+                <div key={index} className="space-y-2">
+                  <div
+                    className={`max-w-[75%] px-4 py-2 rounded-xl text-sm ${
+                      msg.sender === "user"
+                        ? "bg-indigo-500 text-white ml-auto"
+                        : "bg-slate-600 text-slate-100 mr-auto"
+                    }`}
+                  >
+                    {msg.text}
+                  </div>
+
+                  {/* Show Sources button - only for bot messages with sources */}
+                  {msg.sender === "bot" &&
+                    msg.sources &&
+                    msg.sources.length > 0 && (
+                      <div className="max-w-[75%] mr-auto">
+                        <button
+                          type="button"
+                          onClick={() => toggleSources(index)}
+                          className="text-xs text-indigo-400 hover:text-indigo-300 underline flex items-center gap-1"
+                        >
+                          {showSources[index] ? "Hide Sources" : "Show Sources"}
+                        </button>
+
+                        {/* Sources display */}
+                        {showSources[index] && (
+                          <div className="mt-2 bg-slate-800 rounded-lg p-3 space-y-2">
+                            <p className="text-xs font-semibold text-slate-300 mb-2">
+                              📚 Sources ({msg.sources.length})
+                            </p>
+                            {msg.sources.map((source, sourceIndex) => (
+                              <div
+                                key={sourceIndex}
+                                className="bg-slate-700 rounded p-2 text-xs"
+                              >
+                                <p className="text-indigo-300 font-medium mb-1">
+                                  📄 {source.fileName}
+                                </p>
+                                <p className="text-slate-400 italic">
+                                  {source.preview}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                </div>
+              ))}
+
+              {isLoading && (
+                <div className="text-slate-300 text-sm italic">
+                  AI is typing...
+                </div>
+              )}
+            </div>
+
+            {/* Input */}
+            <div className="mt-4 space-y-3">
               <input
-                type="file"
-                accept=".pdf,.txt,.md,text/plain,application/pdf,text/markdown"
-                multiple
-                onChange={HandleFileUpload}
-                className="hidden"
+                type="text"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Type your message..."
+                className="w-full bg-slate-900 text-slate-100 px-4 py-2 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
               />
-            </label>
 
-            {/* Slanje poruke */}
-            <button
-              type="submit"
-              disabled={isUploading}
-              className="flex-1 bg-white text-yellow-700 font-semibold py-2 rounded hover:bg-gray-100 disabled:opacity-50"
-            >
-              Send
-            </button>
-          </div>
-        </div>
-      </form>
+              <div className="flex gap-2">
+                {/* Upload */}
+                <label
+                  className={`bg-slate-700 text-slate-200 px-4 py-2 rounded-lg cursor-pointer hover:bg-slate-600 flex items-center justify-center ${
+                    isUploading ? "opacity-50 pointer-events-none" : ""
+                  }`}
+                  title="Upload files"
+                >
+                  {isUploading ? "⏳" : "📎"}
+                  <input
+                    type="file"
+                    accept=".pdf,.txt,.md"
+                    multiple
+                    onChange={HandleFileUpload}
+                    className="hidden"
+                  />
+                </label>
+                <select
+                  value={selectedModel}
+                  onChange={(e) => setSelectedModel(e.target.value)}
+                  className="bg-slate-900 text-slate-100 px-3 py-2 rounded-lg text-sm outline-none"
+                >
+                  <option value="qwen7">Qwen 2.5:7b</option>
+                  <option value="llama">LLaMA 3</option>
+                  <option value="qwen1">Qwen 2.5:1.5b</option>
+                  <option value="gemma2">Gemma2</option>
+                </select>
+
+                {/* Send */}
+                <button
+                  type="submit"
+                  disabled={isUploading || isLoading}
+                  className="flex-1 bg-indigo-500 text-white font-semibold py-2 rounded-lg hover:bg-indigo-600 disabled:opacity-50"
+                >
+                  Send
+                </button>
+              </div>
+            </div>
+          </form>
+        </main>
+      </div>
     </div>
   );
 }

@@ -70,13 +70,19 @@ export const getDocumentById = async (id, userId) => {
   });
 };
 
-export const deleteDocument = async (id, userId) => {
-  const doc = await prisma.document.findFirst({ where: { id, userId } });
+export const deleteDocument = async (id) => {
+  const doc = await prisma.document.findUnique({
+    where: { id },
+  });
+
   if (!doc) return { error: "Document not found", status: 404 };
 
   const filePath = path.join(UPLOAD_DIR, doc.fileName);
   if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
 
-  await prisma.document.delete({ where: { id } });
+  await prisma.document.delete({
+    where: { id },
+  });
+
   return { message: "Document deleted" };
 };

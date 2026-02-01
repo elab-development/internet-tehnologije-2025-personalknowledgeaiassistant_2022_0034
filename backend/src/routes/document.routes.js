@@ -13,6 +13,7 @@ router.post(
   documentController.uploadDocument,
 );
 router.get("/", authMiddleware, documentController.getDocuments);
+router.get("/:id", authMiddleware, documentController.getDocumentsByUser);
 router.get("/:id", authMiddleware, documentController.getDocument);
 router.delete("/:id", authMiddleware, documentController.deleteDocument);
 

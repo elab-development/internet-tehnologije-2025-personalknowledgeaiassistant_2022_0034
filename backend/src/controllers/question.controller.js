@@ -1,26 +1,39 @@
-import * as questionService from '../services/question.service.js';
-import { success, fail } from '../utils/response.js';
+import * as questionService from "../services/question.service.js";
+import { success, fail } from "../utils/response.js";
 
 export const askQuestion = async (req, res) => {
   try {
-    const { query } = req.body;
-    if (!query) return fail(res, 'Query is required', 400);
+    const { query, model, chatId } = req.body;
+    if (!query) return fail(res, "Query is required", 400);
+    if (!chatId) return fail(res, "Chat ID is required", 400);
 
-    const { question, answer } = await questionService.createQuestion(req.user.id, query);
+    const { question, answer, sources } = await questionService.createQuestion(
+      req.user.id,
+      query,
+      model,
+      chatId
+    );
 
-    success(res, { question, answer }, 'Question answered');
+    success(
+      res,
+      {
+        answer,
+        sources,
+      },
+      "Question answered",
+    );
   } catch (err) {
     console.error(err);
-    fail(res, err.message || 'Failed to process question', 500);
+    fail(res, err.message || "Failed to process question", 500);
   }
 };
 
 export const getQuestions = async (req, res) => {
   try {
     const questions = await questionService.getQuestions(req.user.id);
-    success(res, questions, 'Questions fetched');
+    success(res, questions, "Questions fetched");
   } catch (err) {
     console.error(err);
-    fail(res, err.message || 'Failed to get questions', 500);
+    fail(res, err.message || "Failed to get questions", 500);
   }
 };
