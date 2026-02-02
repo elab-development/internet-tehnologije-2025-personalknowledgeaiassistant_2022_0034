@@ -136,22 +136,22 @@ export default function ChatForma() {
         `http://localhost:3000/api/chat/${chatId}`,
         {
           headers: { Authorization: `Bearer ${token}` },
-        }
+        },
       );
 
       console.log("Chat data:", data);
-      
+
       // Check if data has questions array
       if (data && data.questions && Array.isArray(data.questions)) {
         const formattedMessages = [];
-        
+
         // Add welcome message at the start
         formattedMessages.push({
           sender: "bot",
           text: "Hello! How can I help you?",
           sources: [],
         });
-        
+
         // Add each question and answer pair
         data.questions.forEach((q) => {
           // Add user question
@@ -160,7 +160,7 @@ export default function ChatForma() {
             text: q.query || "",
             sources: [],
           });
-          
+
           // Add bot answer
           formattedMessages.push({
             sender: "bot",
@@ -214,14 +214,15 @@ export default function ChatForma() {
       setIsInitializing(false);
     };
     loadData();
-  }, []); 
+  }, []);
 
   // Load chat history whenever currentChatId changes
   useEffect(() => {
     if (currentChatId && !isInitializing) {
       loadChatHistory(currentChatId);
     }
-  }, [currentChatId]);
+    fetchUploadedFiles();
+  }, [currentChatId, uploadedFiles]);
 
   const HandleFileUpload = async (e) => {
     const files = Array.from(e.target.files);
