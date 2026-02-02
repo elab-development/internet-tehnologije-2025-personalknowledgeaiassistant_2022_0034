@@ -107,4 +107,5 @@ enum FileType {
 enum Role{
   ADMIN
   USER
+  PREMIUM
 }

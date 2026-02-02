@@ -12,6 +12,8 @@ export default function ChatForma() {
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [showSources, setShowSources] = useState({});
   const [selectedModel, setSelectedModel] = useState("qwen7");
+  const [user, setUser] = useState(null);
+  const [role, setRole] = useState("");
 
   const [chats, setChats] = useState([]);
   const [currentChatId, setCurrentChatId] = useState(null);
@@ -139,8 +141,6 @@ export default function ChatForma() {
         },
       );
 
-      console.log("Chat data:", data);
-
       // Check if data has questions array
       if (data && data.questions && Array.isArray(data.questions)) {
         const formattedMessages = [];
@@ -207,6 +207,24 @@ export default function ChatForma() {
 
   // Initial load - only runs once on mount
   useEffect(() => {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      navigate("/", { replace: true });
+      return;
+    }
+
+    axios
+      .get("http://localhost:3000/api/user/me", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((res) => {
+        setUser(res.data);
+        setRole(res.data.data.role);
+        console.log("User data:", res.data);
+        console.log("User role:", res.data.data.role);
+      })
+      .catch(() => setError("Failed to load profile"));
     const loadData = async () => {
       setIsInitializing(true);
       await fetchUploadedFiles();
@@ -401,11 +419,10 @@ export default function ChatForma() {
                 <li
                   key={chat.id}
                   onClick={() => handleChatSelect(chat.id)}
-                  className={`bg-slate-700 text-slate-200 px-3 py-2 rounded cursor-pointer hover:bg-slate-600 flex items-center justify-between group ${
-                    chat.id === currentChatId
-                      ? "ring-2 ring-indigo-500 bg-slate-600"
-                      : "opacity-70"
-                  }`}
+                  className={`bg-slate-700 text-slate-200 px-3 py-2 rounded cursor-pointer hover:bg-slate-600 flex items-center justify-between group ${chat.id === currentChatId
+                    ? "ring-2 ring-indigo-500 bg-slate-600"
+                    : "opacity-70"
+                    }`}
                 >
                   <span className="truncate flex-1 text-xs">
                     {chat.title || "Untitled Chat"}
@@ -491,11 +508,10 @@ export default function ChatForma() {
               {messages.map((msg, index) => (
                 <div key={index} className="space-y-2">
                   <div
-                    className={`max-w-[75%] px-4 py-2 rounded-xl text-sm ${
-                      msg.sender === "user"
-                        ? "bg-indigo-500 text-white ml-auto"
-                        : "bg-slate-600 text-slate-100 mr-auto"
-                    }`}
+                    className={`max-w-[75%] px-4 py-2 rounded-xl text-sm ${msg.sender === "user"
+                      ? "bg-indigo-500 text-white ml-auto"
+                      : "bg-slate-600 text-slate-100 mr-auto"
+                      }`}
                   >
                     {msg.text}
                   </div>
@@ -559,9 +575,8 @@ export default function ChatForma() {
               <div className="flex gap-2">
                 {/* Upload */}
                 <label
-                  className={`bg-slate-700 text-slate-200 px-4 py-2 rounded-lg cursor-pointer hover:bg-slate-600 flex items-center justify-center ${
-                    isUploading ? "opacity-50 pointer-events-none" : ""
-                  }`}
+                  className={`bg-slate-700 text-slate-200 px-4 py-2 rounded-lg cursor-pointer hover:bg-slate-600 flex items-center justify-center ${isUploading ? "opacity-50 pointer-events-none" : ""
+                    }`}
                   title="Upload files"
                 >
                   {isUploading ? "⏳" : "📎"}
@@ -573,16 +588,40 @@ export default function ChatForma() {
                     className="hidden"
                   />
                 </label>
-                <select
-                  value={selectedModel}
-                  onChange={(e) => setSelectedModel(e.target.value)}
-                  className="bg-slate-900 text-slate-100 px-3 py-2 rounded-lg text-sm outline-none"
+                <span
+                  className={`flex items-center h-9 text-xs px-2 rounded-full
+    ${role === "PREMIUM"
+                      ? "bg-slate-700 text-yellow-400"
+                      : "bg-slate-700 text-slate-300"}
+  `}
                 >
-                  <option value="qwen7">Qwen 2.5:7b</option>
-                  <option value="llama">LLaMA 3</option>
-                  <option value="qwen1">Qwen 2.5:1.5b</option>
-                  <option value="gemma2">Gemma2</option>
-                </select>
+                  {role === "PREMIUM" ? "⭐ Premium user" : "👤 Regular user"}
+                </span>
+
+                {
+                  role === "USER" ? (
+                    <select
+                      value={selectedModel}
+                      onChange={(e) => setSelectedModel(e.target.value)}
+                      className="bg-slate-900 text-slate-100 px-3 py-2 rounded-lg text-sm outline-none"
+                    >
+                      <option value="qwen1">Qwen 2.5:1.5b</option>
+                      <option value="gemma2">Gemma2</option>
+                    </select>)
+                    : (
+                      <select
+                        value={selectedModel}
+                        onChange={(e) => setSelectedModel(e.target.value)}
+                        className="bg-slate-900 text-slate-100 px-3 py-2 rounded-lg text-sm outline-none"
+                      >
+                        <option value="qwen7">Qwen 2.5:7b</option>
+                        <option value="llama">LLaMA 3</option>
+                        <option value="qwen1">Qwen 2.5:1.5b</option>
+                        <option value="gemma2">Gemma2</option>
+                      </select>
+                    )
+                }
+
 
                 {/* Send */}
                 <button
