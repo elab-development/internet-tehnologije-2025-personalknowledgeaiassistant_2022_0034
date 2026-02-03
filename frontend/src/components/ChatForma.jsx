@@ -210,7 +210,6 @@ export default function ChatForma() {
     const token = localStorage.getItem("token");
 
     if (!token) {
-      navigate("/", { replace: true });
       return;
     }
 
@@ -224,7 +223,7 @@ export default function ChatForma() {
         console.log("User data:", res.data);
         console.log("User role:", res.data.data.role);
       })
-      .catch(() => setError("Failed to load profile"));
+      .catch(() => console.log("Failed to load profile"));
     const loadData = async () => {
       setIsInitializing(true);
       await fetchUploadedFiles();
