@@ -41,11 +41,11 @@ export default function AdminUsersPage() {
       await axios.put(
         `http://localhost:3000/api/user/${selectedUser.id}`,
         selectedUser,
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` } },
       );
 
       setUsers((prev) =>
-        prev.map((u) => (u.id === selectedUser.id ? selectedUser : u))
+        prev.map((u) => (u.id === selectedUser.id ? selectedUser : u)),
       );
       setIsEditOpen(false);
     } catch (err) {
@@ -169,6 +169,23 @@ export default function AdminUsersPage() {
                 className="w-full px-3 py-2 rounded bg-slate-700 text-slate-100"
                 placeholder="Username"
               />
+              <select
+                value={selectedUser.role}
+                onChange={(e) =>
+                  setSelectedUser((prev) => ({
+                    ...prev,
+                    role: e.target.value,
+                  }))
+                }
+                className="w-full px-3 py-2 rounded bg-slate-700 text-slate-100"
+              >
+                <option value="" disabled>
+                  Select role
+                </option>
+                <option value="USER">USER</option>
+                <option value="ADMIN">ADMIN</option>
+                <option value="PREMIUM">PREMIUM</option>
+              </select>
             </div>
 
             <div className="flex justify-end gap-3 mt-6">

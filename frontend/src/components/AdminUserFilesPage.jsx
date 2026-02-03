@@ -6,7 +6,6 @@ import Navbar from "../components/NavBar.jsx";
 export default function AdminUserFilesPage() {
   const { id } = useParams();
   const [files, setFiles] = useState([]);
-  const [user, setUser] = useState(null);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -18,7 +17,6 @@ export default function AdminUserFilesPage() {
       .then((res) => {
         console.log(res.data);
         setFiles(res.data.data || []);
-        setUser({ username: "Unknown" });
       })
       .catch((err) => {
         console.error(err);
@@ -48,7 +46,7 @@ export default function AdminUserFilesPage() {
 
       <div className="max-w-5xl mx-auto mt-8 bg-slate-800 p-6 rounded-xl shadow-lg">
         <h2 className="text-xl font-semibold text-slate-100 mb-4">
-          📁 Files – {user?.username}
+          📁 Files
         </h2>
 
         {files?.length === 0 ? (
