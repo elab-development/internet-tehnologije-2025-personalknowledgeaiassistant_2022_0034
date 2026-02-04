@@ -205,7 +205,6 @@ export default function ChatForma() {
     }
   };
 
-  // Initial load - only runs once on mount
   useEffect(() => {
     const token = localStorage.getItem("token");
 
@@ -233,13 +232,15 @@ export default function ChatForma() {
     loadData();
   }, []);
 
-  // Load chat history whenever currentChatId changes
   useEffect(() => {
     if (currentChatId && !isInitializing) {
       loadChatHistory(currentChatId);
     }
+  }, [currentChatId]);
+
+  useEffect(() => {
     fetchUploadedFiles();
-  }, [currentChatId, uploadedFiles]);
+  }, [uploadedFiles]);
 
   const HandleFileUpload = async (e) => {
     const files = Array.from(e.target.files);
