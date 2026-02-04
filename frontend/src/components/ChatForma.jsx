@@ -418,10 +418,11 @@ export default function ChatForma() {
                 <li
                   key={chat.id}
                   onClick={() => handleChatSelect(chat.id)}
-                  className={`bg-slate-700 text-slate-200 px-3 py-2 rounded cursor-pointer hover:bg-slate-600 flex items-center justify-between group ${chat.id === currentChatId
-                    ? "ring-2 ring-indigo-500 bg-slate-600"
-                    : "opacity-70"
-                    }`}
+                  className={`bg-slate-700 text-slate-200 px-3 py-2 rounded cursor-pointer hover:bg-slate-600 flex items-center justify-between group ${
+                    chat.id === currentChatId
+                      ? "ring-2 ring-indigo-500 bg-slate-600"
+                      : "opacity-70"
+                  }`}
                 >
                   <span className="truncate flex-1 text-xs">
                     {chat.title || "Untitled Chat"}
@@ -502,57 +503,64 @@ export default function ChatForma() {
             onSubmit={handleSubmit}
             className="flex flex-col flex-1 min-h-0"
           >
-            {/* Messages */}
             <div className="flex-1 overflow-y-auto space-y-3 bg-slate-700 rounded-lg p-4">
-              {messages.map((msg, index) => (
-                <div key={index} className="space-y-2">
-                  <div
-                    className={`max-w-[75%] px-4 py-2 rounded-xl text-sm ${msg.sender === "user"
-                      ? "bg-indigo-500 text-white ml-auto"
-                      : "bg-slate-600 text-slate-100 mr-auto"
+              {messages.map((msg, index) => {
+                if (!msg.text) return null;
+
+                return (
+                  <div key={index} className="space-y-2">
+                    {/* Message bubble */}
+                    <div
+                      className={`max-w-[75%] px-4 py-2 rounded-xl text-sm ${
+                        msg.sender === "user"
+                          ? "bg-indigo-500 text-white ml-auto"
+                          : "bg-slate-600 text-slate-100 mr-auto"
                       }`}
-                  >
-                    {msg.text}
+                    >
+                      {msg.text}
+                    </div>
+
+                    {/* Sources (only for bot) */}
+                    {msg.sender === "bot" &&
+                      msg.sources &&
+                      msg.sources.length > 0 && (
+                        <div className="max-w-[75%] mr-auto">
+                          <button
+                            type="button"
+                            onClick={() => toggleSources(index)}
+                            className="text-xs text-indigo-400 hover:text-indigo-300 underline flex items-center gap-1"
+                          >
+                            {showSources[index]
+                              ? "Hide Sources"
+                              : "Show Sources"}
+                          </button>
+
+                          {showSources[index] && (
+                            <div className="mt-2 bg-slate-800 rounded-lg p-3 space-y-2">
+                              <p className="text-xs font-semibold text-slate-300 mb-2">
+                                📚 Sources ({msg.sources.length})
+                              </p>
+
+                              {msg.sources.map((source, sourceIndex) => (
+                                <div
+                                  key={sourceIndex}
+                                  className="bg-slate-700 rounded p-2 text-xs"
+                                >
+                                  <p className="text-indigo-300 font-medium mb-1">
+                                    📄 {source.fileName}
+                                  </p>
+                                  <p className="text-slate-400 italic">
+                                    {source.preview}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
                   </div>
-
-                  {/* Show Sources button - only for bot messages with sources */}
-                  {msg.sender === "bot" &&
-                    msg.sources &&
-                    msg.sources.length > 0 && (
-                      <div className="max-w-[75%] mr-auto">
-                        <button
-                          type="button"
-                          onClick={() => toggleSources(index)}
-                          className="text-xs text-indigo-400 hover:text-indigo-300 underline flex items-center gap-1"
-                        >
-                          {showSources[index] ? "Hide Sources" : "Show Sources"}
-                        </button>
-
-                        {/* Sources display */}
-                        {showSources[index] && (
-                          <div className="mt-2 bg-slate-800 rounded-lg p-3 space-y-2">
-                            <p className="text-xs font-semibold text-slate-300 mb-2">
-                              📚 Sources ({msg.sources.length})
-                            </p>
-                            {msg.sources.map((source, sourceIndex) => (
-                              <div
-                                key={sourceIndex}
-                                className="bg-slate-700 rounded p-2 text-xs"
-                              >
-                                <p className="text-indigo-300 font-medium mb-1">
-                                  📄 {source.fileName}
-                                </p>
-                                <p className="text-slate-400 italic">
-                                  {source.preview}
-                                </p>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                </div>
-              ))}
+                );
+              })}
 
               {isLoading && (
                 <div className="text-slate-300 text-sm italic">
@@ -574,8 +582,9 @@ export default function ChatForma() {
               <div className="flex gap-2">
                 {/* Upload */}
                 <label
-                  className={`bg-slate-700 text-slate-200 px-4 py-2 rounded-lg cursor-pointer hover:bg-slate-600 flex items-center justify-center ${isUploading ? "opacity-50 pointer-events-none" : ""
-                    }`}
+                  className={`bg-slate-700 text-slate-200 px-4 py-2 rounded-lg cursor-pointer hover:bg-slate-600 flex items-center justify-center ${
+                    isUploading ? "opacity-50 pointer-events-none" : ""
+                  }`}
                   title="Upload files"
                 >
                   {isUploading ? "⏳" : "📎"}
@@ -589,38 +598,37 @@ export default function ChatForma() {
                 </label>
                 <span
                   className={`flex items-center h-9 text-xs px-2 rounded-full
-    ${role === "PREMIUM"
-                      ? "bg-slate-700 text-yellow-400"
-                      : "bg-slate-700 text-slate-300"}
+    ${
+      role === "PREMIUM"
+        ? "bg-slate-700 text-yellow-400"
+        : "bg-slate-700 text-slate-300"
+    }
   `}
                 >
                   {role === "PREMIUM" ? "⭐ Premium user" : "👤 Regular user"}
                 </span>
 
-                {
-                  role === "USER" ? (
-                    <select
-                      value={selectedModel}
-                      onChange={(e) => setSelectedModel(e.target.value)}
-                      className="bg-slate-900 text-slate-100 px-3 py-2 rounded-lg text-sm outline-none"
-                    >
-                      <option value="qwen1">Qwen 2.5:1.5b</option>
-                      <option value="gemma2">Gemma2</option>
-                    </select>)
-                    : (
-                      <select
-                        value={selectedModel}
-                        onChange={(e) => setSelectedModel(e.target.value)}
-                        className="bg-slate-900 text-slate-100 px-3 py-2 rounded-lg text-sm outline-none"
-                      >
-                        <option value="qwen7">Qwen 2.5:7b</option>
-                        <option value="llama">LLaMA 3</option>
-                        <option value="qwen1">Qwen 2.5:1.5b</option>
-                        <option value="gemma2">Gemma2</option>
-                      </select>
-                    )
-                }
-
+                {role === "USER" ? (
+                  <select
+                    value={selectedModel}
+                    onChange={(e) => setSelectedModel(e.target.value)}
+                    className="bg-slate-900 text-slate-100 px-3 py-2 rounded-lg text-sm outline-none"
+                  >
+                    <option value="qwen1">Qwen 2.5:1.5b</option>
+                    <option value="gemma2">Gemma2</option>
+                  </select>
+                ) : (
+                  <select
+                    value={selectedModel}
+                    onChange={(e) => setSelectedModel(e.target.value)}
+                    className="bg-slate-900 text-slate-100 px-3 py-2 rounded-lg text-sm outline-none"
+                  >
+                    <option value="qwen7">Qwen 2.5:7b</option>
+                    <option value="llama">LLaMA 3</option>
+                    <option value="qwen1">Qwen 2.5:1.5b</option>
+                    <option value="gemma2">Gemma2</option>
+                  </select>
+                )}
 
                 {/* Send */}
                 <button
