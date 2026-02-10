@@ -1,12 +1,13 @@
 import prisma from "../config/prisma.js";
 import { getEmbedding, normalize } from "../utils/embedding.js";
 import { getLLM } from "../config/llmFactory.js";
+import xss from "xss";
 
 const TOP_K = 5;
 const MODELS_WITH_SEGMENTS = ["llama", "qwen7"];
 
 export const createQuestion = async (userId, query, model, chatId) => {
-  // Validate that chatId exists
+  const safeQuery = xss(query);
   if (!chatId) {
     throw new Error("chatId is required");
   }
@@ -24,11 +25,11 @@ export const createQuestion = async (userId, query, model, chatId) => {
   }
 
   const question = await prisma.question.create({
-    data: { query, answer: "", userId, chatId },
+    data: { query: safeQuery, answer: "", userId, chatId },
   });
 
   const llm = getLLM(model);
-  const raw = await getEmbedding(query);
+  const raw = await getEmbedding(safeQuery);
   const questionEmbedding = normalize(raw);
 
   const segments = await prisma.$queryRaw`
@@ -53,7 +54,7 @@ CONTEXT:
 ${context}
 
 QUESTION:
-${query}
+${safeQuery}
 
 Return valid JSON only:
 {
