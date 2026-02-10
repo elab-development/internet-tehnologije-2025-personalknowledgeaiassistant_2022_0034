@@ -1,0 +1,61 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: rag_postgres
+    environment:
+      POSTGRES_USER: raguser
+      POSTGRES_PASSWORD: ragpass
+      POSTGRES_DB: ragdb
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - rag_network
+
+  backend:
+    build: ./backend
+    container_name: rag_backend
+    environment:
+      DATABASE_URL: postgres://raguser:ragpass@postgres:5432/ragdb
+      OLLAMA_BASE_URL: http://ollama:11434
+      NODE_OPTIONS: "--dns-result-order=ipv4first"
+    depends_on:
+      - postgres
+      - ollama
+    ports:
+      - "3000:3000"
+    networks:
+      - rag_network
+    extra_hosts:
+      - "ollama:host-gateway"
+
+  frontend:
+    build: ./frontend
+    container_name: rag_frontend
+    depends_on:
+      - backend
+    ports:
+      - "5173:80"
+    networks:
+      - rag_network
+
+  ollama:
+    image: ollama/ollama
+    container_name: rag_ollama
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+    networks:
+      - rag_network
+
+networks:
+  rag_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  ollama_data:

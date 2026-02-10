@@ -1,11 +1,12 @@
 import { Ollama } from "@langchain/community/llms/ollama";
 
+const OLLAMA_URL = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
 export const getLLM = (modelName = "qwen7") => {
   switch (modelName) {
     case "qwen7":
       return new Ollama({
         model: "qwen2.5:7b",
-        baseUrl: "http://localhost:11434",
+        baseUrl: OLLAMA_URL,
         temperature: 0,
         top_p: 0.8,
         numCtx: 2048,
@@ -16,7 +17,7 @@ export const getLLM = (modelName = "qwen7") => {
     case "llama":
       return new Ollama({
         model: "llama3",
-        baseUrl: "http://localhost:11434",
+        baseUrl: OLLAMA_URL,
         temperature: 0,
         top_p: 0.85,
         numCtx: 4096,
@@ -27,7 +28,7 @@ export const getLLM = (modelName = "qwen7") => {
     case "qwen1":
       return new Ollama({
         model: "qwen2.5:1.5b",
-        baseUrl: "http://localhost:11434",
+        baseUrl: OLLAMA_URL,
         temperature: 0,
         top_p: 0.9,
         numCtx: 1024,
@@ -38,7 +39,7 @@ export const getLLM = (modelName = "qwen7") => {
     case "gemma2":
       return new Ollama({
         model: "gemma2:2b",
-        baseUrl: "http://localhost:11434",
+        baseUrl: OLLAMA_URL,
         temperature: 0.1,
         top_p: 0.95,
         numCtx: 4096,

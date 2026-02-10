@@ -7,10 +7,11 @@ import { normalize } from "../utils/embedding.js";
 import { v4 as uuid } from "uuid";
 
 const UPLOAD_DIR = "./uploads";
+const OLLAMA_URL = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
 
 const embeddings = new OllamaEmbeddings({
   model: "nomic-embed-text",
-  baseUrl: "http://localhost:11434",
+  baseUrl: OLLAMA_URL,
 });
 
 export const createDocument = async (userId, file) => {
