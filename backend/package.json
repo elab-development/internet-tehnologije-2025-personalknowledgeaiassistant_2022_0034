@@ -26,6 +26,8 @@
     "multer": "^2.0.2",
     "ollama": "^0.6.3",
     "pdf-parse-fork": "^1.2.0",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1",
     "uuid": "^13.0.0",
     "xss": "^1.0.15"
   },

@@ -32,16 +32,6 @@ export const getDocumentsByUser = async (req, res, next) => {
   }
 };
 
-export const getDocument = async (req, res, next) => {
-  try {
-    const doc = await documentService.getDocumentById(req.params.id, req.user.id);
-    if (!doc) return fail(res, 'Document not found', 404);
-    success(res, doc);
-  } catch (err) {
-    next(err);
-  }
-};
-
 export const deleteDocument = async (req, res, next) => {
   try {
     const result = await documentService.deleteDocument(req.params.id, req.user.id);

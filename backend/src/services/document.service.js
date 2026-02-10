@@ -72,23 +72,6 @@ export const getDocuments = async (userId) => {
   }));
 };
 
-export const getDocumentById = async (docId, userId) => {
-  const doc = await prisma.document.findUnique({
-    where: { id: docId },
-    include: { segments: true },
-  });
-
-  if (!doc) throw new Error("Document not found");
-  // IDOR zaštita
-  if (doc.userId !== userId) throw new Error("Forbidden");
-
-  return {
-    ...doc,
-    fileName: xss(doc.fileName),
-    segments: doc.segments.map(seg => ({ ...seg, content: xss(seg.content) }))
-  };
-};
-
 export const deleteDocument = async (id, userId) => {
   const doc = await prisma.document.findUnique({
     where: { id },
