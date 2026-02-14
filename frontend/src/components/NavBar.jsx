@@ -66,6 +66,18 @@ export default function Navbar() {
         >
           Profile
         </NavLink>
+        <NavLink
+          to="/stats"
+          className={({ isActive }) =>
+            `px-4 py-1.5 rounded-lg font-semibold transition ${
+              isActive
+                ? "bg-indigo-500 text-white"
+                : "hover:bg-slate-700 text-slate-200"
+            }`
+          }
+        >
+          Stats
+        </NavLink>
 
         <button
           onClick={handleLogout}

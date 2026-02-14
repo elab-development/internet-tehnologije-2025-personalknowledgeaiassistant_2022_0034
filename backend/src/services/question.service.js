@@ -29,6 +29,23 @@ export const createQuestion = async (userId, query, model, chatId) => {
   });
 
   const llm = getLLM(model);
+
+  const modelName = model.toLowerCase();
+  const existingStat = await prisma.modelStats.findUnique({
+    where: { modelName: modelName },
+  });
+
+  if (existingStat) {
+    await prisma.modelStats.update({
+      where: { modelName: modelName },
+      data: { usage: { increment: 1 } },
+    });
+  } else {
+    await prisma.modelStats.create({
+      data: { modelName: modelName, usage: 1 },
+    });
+  }
+
   const raw = await getEmbedding(safeQuery);
   const questionEmbedding = normalize(raw);
 

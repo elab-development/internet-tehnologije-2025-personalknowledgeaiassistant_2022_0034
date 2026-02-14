@@ -98,6 +98,13 @@ model QuestionSegment {
   @@unique([questionId, segmentId])
 }
 
+model ModelStats {
+  id        String   @id @default(cuid())
+  modelName String   @unique
+  usage     Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
 enum FileType {
   PDF
   TXT
