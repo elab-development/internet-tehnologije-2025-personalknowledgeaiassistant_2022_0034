@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import Navbar from "./NavBar";
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 export default function ChatForma() {
   const [messages, setMessages] = useState([
     { sender: "bot", text: "Hello! How can I help you?", sources: [] },
@@ -30,11 +32,9 @@ export default function ChatForma() {
     try {
       const token = localStorage.getItem("token");
       const { data } = await axios.post(
-        "http://localhost:3000/api/chat",
+        `${API_URL}/api/chat`,
         { title: title.trim() || "New Chat" },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
+        { headers: { Authorization: `Bearer ${token}` } },
       );
       setChats((prev) => [data, ...prev]);
       setCurrentChatId(data.id);
@@ -59,7 +59,7 @@ export default function ChatForma() {
 
     try {
       const token = localStorage.getItem("token");
-      await axios.delete(`http://localhost:3000/api/chat/${chatId}`, {
+      await axios.delete(`${API_URL}/api/chat/${chatId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -82,7 +82,7 @@ export default function ChatForma() {
   const fetchChats = async () => {
     try {
       const token = localStorage.getItem("token");
-      const { data } = await axios.get("http://localhost:3000/api/chat", {
+      const { data } = await axios.get(`${API_URL}/api/chat`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -110,11 +110,9 @@ export default function ChatForma() {
     try {
       const token = localStorage.getItem("token");
       const { data } = await axios.post(
-        "http://localhost:3000/api/chat",
+        `${API_URL}/api/chat`,
         { title: "New Chat" },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
+        { headers: { Authorization: `Bearer ${token}` } },
       );
       setChats([data]);
       setCurrentChatId(data.id);
@@ -134,12 +132,9 @@ export default function ChatForma() {
 
     try {
       const token = localStorage.getItem("token");
-      const { data } = await axios.get(
-        `http://localhost:3000/api/chat/${chatId}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
+      const { data } = await axios.get(`${API_URL}/api/chat/${chatId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       // Check if data has questions array
       if (data && data.questions && Array.isArray(data.questions)) {
@@ -187,10 +182,8 @@ export default function ChatForma() {
     try {
       const token = localStorage.getItem("token");
 
-      const { data } = await axios.get("http://localhost:3000/api/document", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      const { data } = await axios.get(`${API_URL}/api/document`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       setUploadedFiles(
@@ -213,14 +206,12 @@ export default function ChatForma() {
     }
 
     axios
-      .get("http://localhost:3000/api/user/me", {
+      .get(`${API_URL}/api/user/me`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then((res) => {
         setUser(res.data);
         setRole(res.data.data.role);
-        console.log("User data:", res.data);
-        console.log("User role:", res.data.data.role);
       })
       .catch(() => console.log("Failed to load profile"));
     const loadData = async () => {
@@ -262,16 +253,12 @@ export default function ChatForma() {
 
         console.log("Uploading:", file.name);
 
-        const { data } = await axios.post(
-          "http://localhost:3000/api/document",
-          formData,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "multipart/form-data",
-            },
+        const { data } = await axios.post(`${API_URL}/api/document`, formData, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
           },
-        );
+        });
 
         setUploadedFiles((prev) => [
           ...prev,
@@ -325,12 +312,8 @@ export default function ChatForma() {
       const token = localStorage.getItem("token");
 
       const { data } = await axios.post(
-        "http://localhost:3000/api/questions",
-        {
-          query: userMessage,
-          chatId: chatId,
-          model: selectedModel,
-        },
+        `${API_URL}/api/questions`,
+        { query: userMessage, chatId: chatId, model: selectedModel },
         { headers: { Authorization: `Bearer ${token}` } },
       );
 
@@ -363,10 +346,8 @@ export default function ChatForma() {
     try {
       const token = localStorage.getItem("token");
 
-      await axios.delete(`http://localhost:3000/api/document/${fileId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      await axios.delete(`${API_URL}/api/document/${fileId}`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       setUploadedFiles((prev) => prev.filter((file) => file.id !== fileId));

@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import Navbar from "./NavBar";
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 export default function Profile() {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
@@ -20,7 +22,7 @@ export default function Profile() {
     }
 
     axios
-      .get("http://localhost:3000/api/user/me", {
+      .get(`${API_URL}/api/user/me`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then((res) => {
@@ -46,13 +48,9 @@ export default function Profile() {
       setLoading(true);
       const token = localStorage.getItem("token");
 
-      const res = await axios.put(
-        "http://localhost:3000/api/user/me",
-        formData,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const res = await axios.put(`${API_URL}/api/user/me`, formData, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       setUser(res.data);
       setIsEditing(false);
@@ -87,9 +85,7 @@ export default function Profile() {
       <div className="max-w-4xl mx-auto mt-8 bg-slate-800 p-6 rounded-xl shadow-lg flex flex-col gap-6">
         {/* Header */}
         <div className="flex justify-between items-center">
-          <h2 className="text-slate-100 text-xl font-semibold">
-            👤 Profile
-          </h2>
+          <h2 className="text-slate-100 text-xl font-semibold">👤 Profile</h2>
 
           {!isEditing && (
             <button
@@ -124,11 +120,7 @@ export default function Profile() {
             isEditing={isEditing}
             onChange={handleChange}
           />
-          <ProfileField
-            label="Role"
-            value={user.data.role}
-            disabled
-          />
+          <ProfileField label="Role" value={user.data.role} disabled />
         </div>
 
         {/* Action buttons */}
@@ -177,9 +169,7 @@ function ProfileField({
           className="w-full bg-slate-900 text-slate-100 px-3 py-2 rounded-md outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
         />
       ) : (
-        <p className="text-slate-100 font-semibold text-sm">
-          {value}
-        </p>
+        <p className="text-slate-100 font-semibold text-sm">{value}</p>
       )}
     </div>
   );

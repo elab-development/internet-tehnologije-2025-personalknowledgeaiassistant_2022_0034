@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 export default function LoginForma(props) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -62,8 +64,8 @@ export default function LoginForma(props) {
     if (Object.keys(validationErrors).length === 0) {
       try {
         const endpoint = props.isRegistering
-          ? "http://localhost:3000/api/auth/register"
-          : "http://localhost:3000/api/auth/login";
+          ? `${API_URL}/api/auth/register`
+          : `${API_URL}/api/auth/login`;
 
         const res = await fetch(endpoint, {
           method: "POST",
@@ -100,7 +102,7 @@ export default function LoginForma(props) {
           setServerError(data.message || "An error occurred");
         }
       } catch (err) {
-        setServerError("Cannot connect to server"+err);
+        setServerError("Cannot connect to server" + err);
       }
     }
   }
