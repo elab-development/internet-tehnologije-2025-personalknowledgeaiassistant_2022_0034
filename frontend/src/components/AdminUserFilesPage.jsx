@@ -3,6 +3,8 @@ import axios from "axios";
 import { useParams } from "react-router-dom";
 import Navbar from "../components/NavBar.jsx";
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 export default function AdminUserFilesPage() {
   const { id } = useParams();
   const [files, setFiles] = useState([]);
@@ -11,7 +13,7 @@ export default function AdminUserFilesPage() {
     const token = localStorage.getItem("token");
 
     axios
-      .get(`http://localhost:3000/api/document/${id}`, {
+      .get(`${API_URL}/api/document/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then((res) => {
@@ -29,7 +31,7 @@ export default function AdminUserFilesPage() {
 
     const token = localStorage.getItem("token");
     try {
-      await axios.delete(`http://localhost:3000/api/document/${fileId}`, {
+      await axios.delete(`${API_URL}/api/document/${fileId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -45,9 +47,7 @@ export default function AdminUserFilesPage() {
       <Navbar />
 
       <div className="max-w-5xl mx-auto mt-8 bg-slate-800 p-6 rounded-xl shadow-lg">
-        <h2 className="text-xl font-semibold text-slate-100 mb-4">
-          📁 Files
-        </h2>
+        <h2 className="text-xl font-semibold text-slate-100 mb-4">📁 Files</h2>
 
         {files?.length === 0 ? (
           <p className="text-slate-400">No files uploaded.</p>

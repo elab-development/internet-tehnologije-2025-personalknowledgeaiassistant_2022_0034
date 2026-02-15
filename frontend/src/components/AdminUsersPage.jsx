@@ -3,6 +3,8 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/NavBar.jsx";
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 export default function AdminUsersPage() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -14,7 +16,7 @@ export default function AdminUsersPage() {
     const token = localStorage.getItem("token");
 
     axios
-      .get("http://localhost:3000/api/user", {
+      .get(`${API_URL}/api/user`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then((res) => setUsers(res.data.data))
@@ -26,7 +28,7 @@ export default function AdminUsersPage() {
     if (!window.confirm("Delete this user?")) return;
 
     const token = localStorage.getItem("token");
-    await axios.delete(`http://localhost:3000/api/user/${id}`, {
+    await axios.delete(`${API_URL}/api/user/${id}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -38,11 +40,9 @@ export default function AdminUsersPage() {
     if (!selectedUser) return;
 
     try {
-      await axios.put(
-        `http://localhost:3000/api/user/${selectedUser.id}`,
-        selectedUser,
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
+      await axios.put(`${API_URL}/api/user/${selectedUser.id}`, selectedUser, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       setUsers((prev) =>
         prev.map((u) => (u.id === selectedUser.id ? selectedUser : u)),

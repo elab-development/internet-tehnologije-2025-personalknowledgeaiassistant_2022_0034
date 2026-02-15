@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import Navbar from "./NavBar";
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 const StatsPage = () => {
   const [chartData, setChartData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -27,7 +29,7 @@ const StatsPage = () => {
 
         const token = localStorage.getItem("token");
 
-        const res = await fetch("http://localhost:3000/api/stats", {
+        const res = await fetch(`${API_URL}/api/stats`, {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
@@ -87,7 +89,7 @@ const StatsPage = () => {
       };
 
       const chart = new window.google.visualization.PieChart(
-        document.getElementById("chart_div")
+        document.getElementById("chart_div"),
       );
       chart.draw(data, options);
     };
@@ -139,10 +141,7 @@ const StatsPage = () => {
         {/* Chart container */}
         {!loading && !error && (
           <div className="bg-slate-700 rounded-lg p-4 shadow-inner">
-            <div
-              id="chart_div"
-              className="w-full min-h-[400px]"
-            ></div>
+            <div id="chart_div" className="w-full min-h-[400px]"></div>
           </div>
         )}
       </div>

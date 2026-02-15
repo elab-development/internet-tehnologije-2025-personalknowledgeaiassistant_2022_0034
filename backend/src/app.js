@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import dotenv from "dotenv";
 import authRoutes from "./routes/auth.routes.js";
 import userRoutes from "./routes/user.routes.js";
 import documentRoutes from "./routes/document.routes.js";
@@ -12,11 +13,13 @@ import { swaggerSpec } from "./config/swagger.js";
 
 const app = express();
 
-app.use(
-  cors({
-    origin: "http://localhost:5173",
-  }),
-);
+
+dotenv.config();
+
+app.use(cors({
+  origin: process.env.FRONTEND_URL,
+}));
+
 app.use(express.json());
 
 app.use("/api/auth", authRoutes);
