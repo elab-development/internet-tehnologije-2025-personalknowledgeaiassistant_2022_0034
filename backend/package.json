@@ -4,8 +4,9 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon -r dotenv/config src/server.js"
+    "start": "nodemon -r dotenv/config src/server.js",
+    "test": "vitest",
+    "test:run": "vitest run"
   },
   "prisma": {
     "seed": "node prisma/seed.js"
@@ -32,7 +33,11 @@
     "xss": "^1.0.15"
   },
   "devDependencies": {
+    "@jest/globals": "^30.2.0",
+    "@vitest/coverage-v8": "^4.0.18",
+    "jest": "^30.2.0",
     "nodemon": "^3.1.11",
-    "prisma": "^6.1.0"
+    "prisma": "^6.1.0",
+    "vitest": "^4.0.18"
   }
 }
