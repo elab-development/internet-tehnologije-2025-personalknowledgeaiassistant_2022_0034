@@ -6,6 +6,7 @@ import AdminUserFilesPage from "./components/AdminUserFilesPage";
 import AdminUsersPage from "./components/AdminUsersPage";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { useState } from "react";
+import StatsPage from "./components/StatsPage";
 
 function App() {
   const [isRegistering, setIsRegistering] = useState(false); // State za prebacivanje između login i register
@@ -27,6 +28,14 @@ function App() {
         element={
           <ProtectedRoute>
             <Profile />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/stats"
+        element={
+          <ProtectedRoute>
+            <StatsPage />
           </ProtectedRoute>
         }
       />

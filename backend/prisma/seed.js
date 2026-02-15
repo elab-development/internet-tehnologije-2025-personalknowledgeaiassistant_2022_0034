@@ -18,7 +18,25 @@ async function main() {
     },
   });
 
-  console.log("Seed user ensured");
+  const models = [
+    { modelName: "qwen7", usage: 120 },
+    { modelName: "qwen1", usage: 85 },
+    { modelName: "llama", usage: 60 },
+    { modelName: "gemma2", usage: 40 },
+  ];
+
+  for (const model of models) {
+    await prisma.modelStats.upsert({
+      where: { modelName: model.modelName },
+      update: {},
+      create: {
+        modelName: model.modelName,
+        usage: model.usage,
+      },
+    });
+  }
+
+  console.log("Seed user and model stats ensured");
 }
 
 main()
