@@ -55,8 +55,11 @@ jobs:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.VM_SSH_KEY }}
+          port: 22
+          timeout: 30s
+          command_timeout: 10m
           script: |
-            cd ~/app
+            cd ~/internet-tehnologije-2025-personalknowledgeaiassistant_2022_0034
             git pull origin main
             docker compose down
             docker compose build
